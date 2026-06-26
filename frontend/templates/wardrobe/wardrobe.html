@@ -1,0 +1,169 @@
+{% extends "base.html" %}
+{% block title %}ตู้เสื้อผ้า - NEXTDAY{% endblock %}
+{% block page_title %}ตู้เสื้อผ้า{% endblock %}
+
+{% block content %}
+<div class="sub-page wardrobe-page">
+    <div class="sub-hero">
+        <h1>ตู้เสื้อผ้าดิจิทัล</h1>
+        <p>กดที่เสื้อผ้าเพื่อปรับประเภท ท่อน ความเป็นทางการ ความหนาผ้า และสี</p>
+    </div>
+
+    <form method="get" class="search-bar">
+        {{ form.q }}
+        {{ form.garment_type }}
+        <button type="submit" class="btn-primary">ค้นหา</button>
+    </form>
+
+    {% if items %}
+    <div class="wardrobe-grid">
+        {% for item in items %}
+        <article class="wardrobe-card" data-item-id="{{ item.pk }}" data-edit-url="{% url 'wardrobe:edit' item.pk %}">
+            <button type="button" class="wardrobe-card-btn" aria-label="แก้ไขเสื้อผ้า">
+                <div class="wardrobe-card-img">
+                    {% if item.cropped_image %}
+                        <img src="{{ item.cropped_image.url }}" alt="">
+                    {% elif item.image %}
+                        <img src="{{ item.image.url }}" alt="">
+                    {% endif %}
+                    <span class="wardrobe-card-overlay"><i class="ti ti-pencil"></i> แก้ไข</span>
+                </div>
+                <div class="wardrobe-card-body">
+                    <div class="wardrobe-card-top">
+                        <strong>{{ item.get_garment_type_display }}</strong>
+                        {% if item.needs_review %}
+                            <span class="tag-warn">รอตรวจ</span>
+                        {% endif %}
+                    </div>
+                    <div class="color-row">
+                        <span class="color-dot" style="background:{{ item.primary_color_hex }}"></span>
+                        <span>{{ item.color_name_th }}</span>
+                    </div>
+                    <div class="wardrobe-card-meta">
+                        <span>{% if item.part == 'top' %}ท่อนบน{% else %}ท่อนล่าง{% endif %}</span>
+                        <span>ทางการ {{ item.formality }}/6</span>
+                        <span>{{ item.get_fabric_thickness_display }}</span>
+                    </div>
+                </div>
+            </button>
+            <form method="post" action="{% url 'wardrobe:delete' item.pk %}" class="wardrobe-delete" onsubmit="return confirm('ลบเสื้อผ้านี้?')">
+                {% csrf_token %}
+                <button type="submit" class="btn-icon-danger" title="ลบ"><i class="ti ti-trash"></i></button>
+            </form>
+        </article>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p class="empty-hint">ยังไม่มีเสื้อผ้า — <a href="{% url 'wardrobe:upload' %}">อัปโหลดเลย</a></p>
+    {% endif %}
+</div>
+
+<div class="modal" id="edit-modal" hidden>
+    <div class="modal-backdrop" data-close></div>
+    <div class="modal-sheet">
+        <div class="modal-head">
+            <h3>ปรับข้อมูลเสื้อผ้า</h3>
+            <button type="button" class="modal-close" data-close><i class="ti ti-x"></i></button>
+        </div>
+        <div class="modal-preview" id="modal-preview"></div>
+        <form method="post" id="edit-form" class="modal-form">
+            {% csrf_token %}
+            <div class="form-group">
+                <label for="f-garment_type">ประเภท</label>
+                <select name="garment_type" class="form-input" id="f-garment_type">
+                    {% for val, label in garment_types %}
+                    <option value="{{ val }}">{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="f-part">ท่อน</label>
+                <select name="part" class="form-input" id="f-part">
+                    <option value="top">ท่อนบน</option>
+                    <option value="bottom">ท่อนล่าง</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="f-formality">ความเป็นทางการ</label>
+                <select name="formality" class="form-input" id="f-formality">
+                    {% for val, label in formality_choices %}
+                    <option value="{{ val }}">{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="f-fabric_thickness">ความหนาผ้า</label>
+                <select name="fabric_thickness" class="form-input" id="f-fabric_thickness">
+                    {% for val, label in thickness_choices %}
+                    <option value="{{ val }}">{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            {% include "wardrobe/partials/color_picker.html" with color_input_id="f-primary_color_hex" color_label_id="color-picked-label" color_choices=color_choices %}
+            <button type="submit" class="btn-primary btn-block">บันทึกการเปลี่ยนแปลง</button>
+        </form>
+    </div>
+</div>
+
+<script src="/static/js/item-edit.js"></script>
+<script>
+(function () {
+    const modal = document.getElementById("edit-modal");
+    const form = document.getElementById("edit-form");
+    const preview = document.getElementById("modal-preview");
+    const cards = document.querySelectorAll(".wardrobe-card");
+    const colorHexes = [{% for hex, name in color_choices %}"{{ hex }}"{% if not forloop.last %}, {% endif %}{% endfor %}];
+
+    const itemData = {
+        {% for item in items %}
+        {{ item.pk }}: {
+            url: "{% if item.image %}{{ item.image.url }}{% endif %}",
+            garment_type: "{{ item.garment_type }}",
+            part: "{{ item.part }}",
+            formality: {{ item.formality }},
+            fabric_thickness: "{{ item.fabric_thickness }}",
+            color_name_th: "{{ item.color_name_th }}",
+            primary_color_hex: "{{ item.primary_color_hex|lower }}",
+            label: "{{ item.get_garment_type_display }}"
+        }{% if not forloop.last %},{% endif %}
+        {% endfor %}
+    };
+
+    function nearestColor(hex) {
+        if (colorHexes.includes(hex)) return hex;
+        return colorHexes[0];
+    }
+
+    function openModal(pk, editUrl) {
+        const d = itemData[pk];
+        if (!d) return;
+        form.action = editUrl;
+        document.getElementById("f-garment_type").value = d.garment_type;
+        document.getElementById("f-part").value = d.part;
+        document.getElementById("f-formality").value = d.formality;
+        document.getElementById("f-fabric_thickness").value = d.fabric_thickness;
+        const hex = nearestColor(d.primary_color_hex);
+        document.getElementById("f-primary_color_hex").value = hex;
+        preview.innerHTML = '<img src="' + d.url + '" alt=""><div><strong>' + d.label + '</strong><span>' + d.color_name_th + ' · ทางการ ' + d.formality + '/6</span></div>';
+        modal.hidden = false;
+        document.body.style.overflow = "hidden";
+        window.initColorPickers(modal);
+    }
+
+    function closeModal() {
+        modal.hidden = true;
+        document.body.style.overflow = "";
+    }
+
+    cards.forEach(function (card) {
+        card.querySelector(".wardrobe-card-btn").addEventListener("click", function () {
+            openModal(card.dataset.itemId, card.dataset.editUrl);
+        });
+    });
+
+    modal.querySelectorAll("[data-close]").forEach(function (el) {
+        el.addEventListener("click", closeModal);
+    });
+})();
+</script>
+{% endblock %}

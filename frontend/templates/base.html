@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}NEXTDAY{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+    <link rel="stylesheet" href="/static/css/style.css?v=3">
+    <link rel="stylesheet" href="/static/css/wardrobe.css?v=13">
+</head>
+<body class="app-body">
+    {% if mock_mode %}
+    <div class="mock-banner">
+        <i class="ti ti-presentation"></i>
+        <span>โหมด Mockup — ข้อมูลตัวอย่างทั้งเว็บ ยังไม่เชื่อมฐานข้อมูลและ AI จริง</span>
+    </div>
+    {% endif %}
+
+    <div class="app-shell">
+        <input type="checkbox" id="side-toggle" class="side-toggle-input" hidden>
+        <label for="side-toggle" class="side-scrim"></label>
+
+        <aside class="sidebar">
+            <a href="{% url 'wardrobe:dashboard' %}" class="side-logo">
+                <span class="side-logo-mark">N</span>
+                <span class="side-logo-text">NEXTDAY</span>
+            </a>
+
+            <a href="{% url 'wardrobe:upload' %}" class="side-upload">
+                <i class="ti ti-camera-plus"></i> อัปโหลดเสื้อผ้า
+            </a>
+
+            <nav class="side-nav">
+                <span class="side-group">เมนูหลัก</span>
+                <a href="{% url 'wardrobe:dashboard' %}" class="side-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+                    <i class="ti ti-layout-dashboard"></i> หน้าหลัก
+                </a>
+                <a href="{% url 'wardrobe:wardrobe' %}" class="side-link {% if request.resolver_match.url_name == 'wardrobe' or request.resolver_match.url_name == 'edit' %}active{% endif %}">
+                    <i class="ti ti-hanger"></i> ตู้เสื้อผ้า
+                </a>
+                <a href="{% url 'wardrobe:outfit' %}" class="side-link {% if request.resolver_match.url_name == 'outfit' %}active{% endif %}">
+                    <i class="ti ti-sparkles"></i> แนะนำชุด
+                </a>
+                <a href="{% url 'wardrobe:manual_outfit' %}" class="side-link {% if request.resolver_match.url_name == 'manual_outfit' %}active{% endif %}">
+                    <i class="ti ti-wand"></i> จัดชุดเอง
+                </a>
+                <a href="{% url 'wardrobe:favorites' %}" class="side-link {% if request.resolver_match.url_name == 'favorites' %}active{% endif %}">
+                    <i class="ti ti-heart"></i> ประวัติชุดโปรด
+                </a>
+                <a href="{% url 'wardrobe:community' %}" class="side-link {% if request.resolver_match.url_name == 'community' %}active{% endif %}">
+                    <i class="ti ti-users"></i> คอมมูนิตี้
+                </a>
+
+                <span class="side-group">บัญชี</span>
+                <a href="{% url 'wardrobe:profile' %}" class="side-link {% if request.resolver_match.url_name == 'profile' %}active{% endif %}">
+                    <i class="ti ti-user"></i> โปรไฟล์
+                </a>
+                <a href="{% url 'wardrobe:feedback' %}" class="side-link {% if request.resolver_match.url_name == 'feedback' %}active{% endif %}">
+                    <i class="ti ti-message-report"></i> แจ้งปัญหา/เสนอแนะ
+                </a>
+            </nav>
+
+            {% if user.is_authenticated %}
+            <div class="side-foot">
+                <div class="side-user">
+                    <div class="avatar">{{ user.username|slice:":1"|upper }}</div>
+                    <div class="side-user-info">
+                        <strong>{{ user.username }}</strong>
+                        <span>สมาชิก NEXTDAY</span>
+                    </div>
+                </div>
+                <a href="{% url 'accounts:logout' %}" class="side-logout" title="ออกจากระบบ"><i class="ti ti-logout"></i></a>
+            </div>
+            {% endif %}
+        </aside>
+
+        <div class="main-area">
+            <header class="topbar">
+                <label for="side-toggle" class="topbar-menu" aria-label="เมนู"><i class="ti ti-menu-2"></i></label>
+                <div class="topbar-title">{% block page_title %}{% endblock %}</div>
+                <div class="topbar-actions">
+                    <a href="{% url 'wardrobe:upload' %}" class="topbar-btn" title="อัปโหลด"><i class="ti ti-camera-plus"></i></a>
+                    {% if user.is_authenticated %}
+                    <a href="{% url 'wardrobe:profile' %}" class="avatar avatar-sm" title="โปรไฟล์">{{ user.username|slice:":1"|upper }}</a>
+                    {% endif %}
+                </div>
+            </header>
+
+            <main class="page-body">
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+                    {% endfor %}
+                {% endif %}
+                {% block content %}{% endblock %}
+            </main>
+        </div>
+    </div>
+</body>
+</html>

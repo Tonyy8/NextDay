@@ -1,0 +1,16 @@
+services:
+  postgres:
+    image: postgres:17
+    container_name: nextday_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: nextday_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - nextday_pgdata:/var/lib/postgresql/data
+
+volumes:
+  nextday_pgdata:

@@ -1,0 +1,16 @@
+<div class="form-group">
+    <label>สี</label>
+    <input type="hidden" name="primary_color_hex" id="{{ color_input_id }}" value="{{ selected_color|default:'' }}">
+    <div class="color-picker" data-color-input="{{ color_input_id }}" data-color-label="{{ color_label_id }}">
+        {% for hex, name in color_choices %}
+        <button type="button"
+                class="color-swatch-btn{% if selected_color and selected_color == hex %} is-selected{% endif %}"
+                style="background: {{ hex }};"
+                data-hex="{{ hex }}"
+                data-name="{{ name }}"
+                title="{{ name }}"
+                aria-label="{{ name }}"></button>
+        {% endfor %}
+    </div>
+    <span class="color-picked-label" id="{{ color_label_id }}">เลือกสี</span>
+</div>

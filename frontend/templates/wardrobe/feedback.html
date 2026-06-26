@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}แจ้งปัญหา/เสนอแนะ - NEXTDAY{% endblock %}
+{% block page_title %}แจ้งปัญหา / เสนอแนะ{% endblock %}
+
+{% block content %}
+<div class="sub-page feedback-page">
+    <div class="sub-hero">
+        <h1>แจ้งปัญหา / เสนอแนะ</h1>
+        <p>พบบั๊กหรือมีไอเดียดีๆ บอกเราได้เลย ช่วยให้ NEXTDAY ดีขึ้น</p>
+    </div>
+
+    <form method="post" enctype="multipart/form-data" class="card feedback-form">
+        {% csrf_token %}
+
+        <div class="form-group">
+            <label>ประเภท</label>
+            <div class="radio-row">
+                <label class="radio-pill"><input type="radio" name="kind" value="bug" checked> <span><i class="ti ti-bug"></i> แจ้งบั๊ก</span></label>
+                <label class="radio-pill"><input type="radio" name="kind" value="idea"> <span><i class="ti ti-bulb"></i> เสนอแนะ</span></label>
+                <label class="radio-pill"><input type="radio" name="kind" value="other"> <span><i class="ti ti-dots"></i> อื่นๆ</span></label>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="subject">หัวข้อ</label>
+            <input type="text" name="subject" id="subject" class="form-input" placeholder="สรุปสั้นๆ เช่น สีของชุดเพี้ยน" required>
+        </div>
+
+        <div class="form-group">
+            <label for="detail">รายละเอียด</label>
+            <textarea name="detail" id="detail" class="form-input" rows="5" placeholder="เล่ารายละเอียด ขั้นตอนที่ทำให้เกิดปัญหา หรือไอเดียของคุณ"></textarea>
+        </div>
+
+        <div class="form-group">
+            <label for="screenshot">แนบรูป (ไม่บังคับ)</label>
+            <input type="file" name="screenshot" id="screenshot" class="form-input" accept="image/*">
+        </div>
+
+        <button type="submit" class="btn-primary btn-block"><i class="ti ti-send"></i> ส่งข้อเสนอแนะ</button>
+    </form>
+</div>
+{% endblock %}

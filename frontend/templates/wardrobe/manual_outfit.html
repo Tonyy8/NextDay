@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+{% block title %}จัดชุดเอง - NEXTDAY{% endblock %}
+{% block page_title %}จัดชุดเอง{% endblock %}
+
+{% block content %}
+<div class="sub-page manual-page">
+    <div class="sub-hero">
+        <h1>จัดชุดเอง</h1>
+        <p>เลือกท่อนบนและท่อนล่างที่ชอบ ระบบจะคำนวณความเข้ากันของสีให้ทันที</p>
+    </div>
+
+    <div class="manual-layout">
+        <section class="manual-picker">
+            <div class="card">
+                <div class="card-label-dark">เลือกท่อนบน</div>
+                <div class="pick-grid" id="tops">
+                    {% for item in tops %}
+                    <button type="button" class="pick-item" data-part="top"
+                        data-pk="{{ item.pk }}"
+                        data-hex="{{ item.primary_color_hex }}"
+                        data-name="{{ item.get_garment_type_display }}"
+                        data-color="{{ item.color_name_th }}"
+                        data-l="{{ item.lab_l }}" data-a="{{ item.lab_a }}" data-b="{{ item.lab_b }}"
+                        data-img="{{ item.image.url }}">
+                        <span class="pick-img"><img src="{{ item.image.url }}" alt=""></span>
+                        <span class="pick-name">{{ item.get_garment_type_display }}</span>
+                        <span class="pick-color"><span class="color-dot" style="background:{{ item.primary_color_hex }}"></span>{{ item.color_name_th }}</span>
+                    </button>
+                    {% empty %}
+                    <p class="empty-hint">ยังไม่มีท่อนบน</p>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-label-dark">เลือกท่อนล่าง</div>
+                <div class="pick-grid" id="bottoms">
+                    {% for item in bottoms %}
+                    <button type="button" class="pick-item" data-part="bottom"
+                        data-pk="{{ item.pk }}"
+                        data-hex="{{ item.primary_color_hex }}"
+                        data-name="{{ item.get_garment_type_display }}"
+                        data-color="{{ item.color_name_th }}"
+                        data-l="{{ item.lab_l }}" data-a="{{ item.lab_a }}" data-b="{{ item.lab_b }}"
+                        data-img="{{ item.image.url }}">
+                        <span class="pick-img"><img src="{{ item.image.url }}" alt=""></span>
+                        <span class="pick-name">{{ item.get_garment_type_display }}</span>
+                        <span class="pick-color"><span class="color-dot" style="background:{{ item.primary_color_hex }}"></span>{{ item.color_name_th }}</span>
+                    </button>
+                    {% empty %}
+                    <p class="empty-hint">ยังไม่มีท่อนล่าง</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </section>
+
+        <aside class="manual-preview card">
+            <div class="card-label-dark">ชุดของคุณ</div>
+            <div class="manual-pair">
+                <div class="manual-slot" id="slot-top">
+                    <div class="manual-slot-img"><i class="ti ti-shirt"></i></div>
+                    <div class="manual-slot-name">เลือกท่อนบน</div>
+                </div>
+                <div class="pair-connector"><i class="ti ti-plus"></i></div>
+                <div class="manual-slot" id="slot-bottom">
+                    <div class="manual-slot-img"><i class="ti ti-shirt"></i></div>
+                    <div class="manual-slot-name">เลือกท่อนล่าง</div>
+                </div>
+            </div>
+
+            <div class="manual-score" id="score-box" hidden>
+                <div class="manual-score-num"><span id="score-val">0</span>%</div>
+                <div class="match-bar">
+                    <div class="bar-track"><div class="bar-fill" id="score-fill" style="width:0%"></div></div>
+                </div>
+                <p class="score-detail" id="score-detail"></p>
+            </div>
+            <p class="empty-hint" id="score-hint">เลือกครบทั้งสองท่อนเพื่อดูคะแนนสี</p>
+        </aside>
+    </div>
+</div>
+
+<script>
+(function () {
+    var selected = { top: null, bottom: null };
+
+    function dist(a, b) {
+        return Math.sqrt(
+            Math.pow(a.l - b.l, 2) + Math.pow(a.a - b.a, 2) + Math.pow(a.b - b.b, 2)
+        );
+    }
+
+    function colorScore(top, bottom) {
+        var d = dist(top, bottom);
+        var score = 50;
+        if (d >= 12 && d <= 45) score += 35;
+        else if (d < 12) score += 12;
+        else score += Math.max(0, 25 - (d - 45) * 0.3);
+        score = Math.min(100, Math.max(0, Math.round(score)));
+        var detail = "ΔE=" + d.toFixed(1);
+        if (d < 12) detail += " · สีใกล้กันเกินไป";
+        else if (d > 45) detail += " · สีตัดกันแรง";
+        else detail += " · โซนสีเหมาะสม";
+        return { score: score, detail: detail };
+    }
+
+    function renderSlot(part, data) {
+        var slot = document.getElementById("slot-" + part);
+        slot.querySelector(".manual-slot-img").innerHTML = '<img src="' + data.img + '" alt="">';
+        slot.querySelector(".manual-slot-name").textContent = data.name + " · " + data.color;
+    }
+
+    function update() {
+        if (selected.top && selected.bottom) {
+            var res = colorScore(selected.top, selected.bottom);
+            document.getElementById("score-hint").hidden = true;
+            document.getElementById("score-box").hidden = false;
+            document.getElementById("score-val").textContent = res.score;
+            document.getElementById("score-fill").style.width = res.score + "%";
+            document.getElementById("score-detail").textContent = res.detail;
+        }
+    }
+
+    document.querySelectorAll(".pick-item").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+            var part = btn.dataset.part;
+            document.querySelectorAll('.pick-item[data-part="' + part + '"]').forEach(function (el) {
+                el.classList.remove("selected");
+            });
+            btn.classList.add("selected");
+            var data = {
+                l: parseFloat(btn.dataset.l), a: parseFloat(btn.dataset.a), b: parseFloat(btn.dataset.b),
+                img: btn.dataset.img, name: btn.dataset.name, color: btn.dataset.color
+            };
+            selected[part] = data;
+            renderSlot(part, data);
+            update();
+        });
+    });
+})();
+</script>
+{% endblock %}

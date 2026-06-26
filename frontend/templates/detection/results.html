@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+
+{% block title %}ผลการวิเคราะห์ - Next Day{% endblock %}
+
+{% block content %}
+<section class="results-section">
+    <h1>ผลการวิเคราะห์</h1>
+
+    <div class="results-grid">
+        <div class="result-images">
+            {% if analysis.annotated_image %}
+                <figure>
+                    <img src="{{ analysis.annotated_image.url }}" alt="ผลการตรวจจับ">
+                    <figcaption>ภาพที่ตรวจจับแล้ว</figcaption>
+                </figure>
+            {% endif %}
+            {% if analysis.image %}
+                <figure>
+                    <img src="{{ analysis.image.url }}" alt="ภาพต้นฉบับ">
+                    <figcaption>ภาพต้นฉบับ</figcaption>
+                </figure>
+            {% endif %}
+        </div>
+
+        <div class="result-details">
+            <table class="detail-table">
+                <tr>
+                    <th>ประเภทวัตถุ</th>
+                    <td>{{ analysis.class_name }}</td>
+                </tr>
+                <tr>
+                    <th>ความมั่นใจ</th>
+                    <td>{% widthratio analysis.confidence 1 100 as conf_pct %}{{ conf_pct|floatformat:1 }}%</td>
+                </tr>
+                <tr>
+                    <th>รูปทรง</th>
+                    <td>{{ analysis.shape_label }} (อัตราส่วน {{ analysis.aspect_ratio }})</td>
+                </tr>
+                <tr>
+                    <th>สีหลัก</th>
+                    <td>
+                        <span class="color-swatch large" style="background-color: {{ analysis.primary_color_hex }}"></span>
+                        {{ analysis.primary_color_hex }} &mdash; RGB {{ analysis.primary_color_rgb }}
+                    </td>
+                </tr>
+                <tr>
+                    <th>วันที่วิเคราะห์</th>
+                    <td>{{ analysis.created_at|date:"d/m/Y H:i" }}</td>
+                </tr>
+            </table>
+
+            {% if analysis.dominant_colors %}
+            <h3>สีเด่นทั้งหมด</h3>
+            <div class="color-palette">
+                {% for color in analysis.dominant_colors %}
+                <div class="color-item">
+                    <span class="color-swatch" style="background-color: {{ color.hex }}"></span>
+                    <span>{{ color.hex }}</span>
+                    <span class="percentage">{{ color.percentage }}%</span>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if related %}
+    <h3>วัตถุอื่นในภาพเดียวกัน</h3>
+    <div class="card-grid">
+        {% for item in related %}
+        <a href="{% url 'detection:results' item.pk %}" class="card">
+            <div class="card-body">
+                <span class="badge">{{ item.class_name }}</span>
+                <span class="color-swatch" style="background-color: {{ item.primary_color_hex }}"></span>
+                <span>{{ item.primary_color_hex }}</span>
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="actions">
+        <a href="{% url 'detection:index' %}" class="btn btn-primary">วิเคราะห์รูปใหม่</a>
+        <a href="{% url 'detection:history' %}" class="btn btn-secondary">ดูประวัติทั้งหมด</a>
+    </div>
+</section>
+{% endblock %}

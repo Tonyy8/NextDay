@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block title %}อัปโหลดรูปภาพ - Next Day{% endblock %}
+
+{% block content %}
+<section class="hero">
+    <h1>ระบบวิเคราะห์เสื้อผ้าอัจฉริยะ</h1>
+    <p>ตรวจจับวัตถุด้วย YOLOv8 วิเคราะห์รูปทรง และสกัดสีหลักด้วย OpenCV</p>
+</section>
+
+<section class="upload-section">
+  <form method="post" enctype="multipart/form-data" class="upload-form">
+    {% csrf_token %}
+    <div class="form-group">
+      {{ form.image.label_tag }}
+      {{ form.image }}
+      {% if form.image.help_text %}
+        <small class="help-text">{{ form.image.help_text }}</small>
+      {% endif %}
+      {% if form.image.errors %}
+        <div class="error">{{ form.image.errors }}</div>
+      {% endif %}
+    </div>
+    <button type="submit" class="btn btn-primary">วิเคราะห์รูปภาพ</button>
+  </form>
+</section>
+
+{% if recent_analyses %}
+<section class="recent-section">
+    <h2>ผลลัพธ์ล่าสุด</h2>
+    <div class="card-grid">
+        {% for item in recent_analyses %}
+        <a href="{% url 'detection:results' item.pk %}" class="card">
+            {% if item.image %}
+                <img src="{{ item.image.url }}" alt="{{ item.class_name }}">
+            {% endif %}
+            <div class="card-body">
+                <span class="badge">{{ item.class_name }}</span>
+                <span class="color-swatch" style="background-color: {{ item.primary_color_hex }}"></span>
+                <span>{{ item.primary_color_hex }}</span>
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+</section>
+{% endif %}
+{% endblock %}

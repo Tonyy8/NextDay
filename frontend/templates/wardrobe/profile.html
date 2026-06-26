@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block title %}โปรไฟล์ - NEXTDAY{% endblock %}
+{% block page_title %}โปรไฟล์{% endblock %}
+
+{% block content %}
+<div class="sub-page profile-page">
+    <div class="sub-hero">
+        <h1>โปรไฟล์ของฉัน</h1>
+        <p>แก้ไขข้อมูลบัญชีและตั้งค่าการแนะนำชุดของคุณ</p>
+    </div>
+
+    <form method="post" class="profile-grid">
+        {% csrf_token %}
+
+        <div class="card">
+            <div class="profile-header">
+                <div class="profile-avatar">{{ username|slice:":1"|upper }}</div>
+                <div class="profile-id">
+                    <h2>{{ username }}</h2>
+                    <p>{{ email }}</p>
+                    <span class="profile-chip"><i class="ti ti-sparkles"></i> {{ style_pref }}</span>
+                </div>
+            </div>
+
+            <div class="profile-stats">
+                <div class="pstat"><strong>{{ total_items }}</strong><span>เสื้อผ้าในตู้</span></div>
+                <div class="pstat"><strong>{{ favorites_count }}</strong><span>ชุดโปรด</span></div>
+            </div>
+
+            <div class="profile-form">
+                {% for field in form %}
+                    {% if field.name == 'display_name' or field.name == 'email' or field.name == 'style_pref' %}
+                    <div class="form-group">
+                        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                        {{ field }}
+                        {% for err in field.errors %}<span class="field-error">{{ err }}</span>{% endfor %}
+                    </div>
+                    {% endif %}
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-label-dark">น้ำหนักการให้คะแนนชุด</div>
+            <p class="upload-hint">ปรับสัดส่วนการจัดอันดับชุด (รวมกันต้องได้ 100%)</p>
+
+            {% if form.non_field_errors %}
+                <div class="auth-alert auth-alert-error">{{ form.non_field_errors|join:", " }}</div>
+            {% endif %}
+
+            <div class="profile-form">
+                {% for field in form %}
+                    {% if field.name == 'weight_correctness' or field.name == 'weight_weather' or field.name == 'weight_color' %}
+                    <div class="form-group">
+                        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                        {{ field }}
+                        {% for err in field.errors %}<span class="field-error">{{ err }}</span>{% endfor %}
+                    </div>
+                    {% endif %}
+                {% endfor %}
+            </div>
+
+            <div class="match-bar">
+                <div class="match-label"><span>ความถูกต้องตามโอกาส</span><span class="text-wine">{{ weight_correctness }}%</span></div>
+                <div class="bar-track"><div class="bar-fill" style="width:{{ weight_correctness }}%;background:var(--wine)"></div></div>
+            </div>
+            <div class="match-bar">
+                <div class="match-label"><span>เหมาะกับอากาศ</span><span class="text-sage">{{ weight_weather }}%</span></div>
+                <div class="bar-track"><div class="bar-fill" style="width:{{ weight_weather }}%;background:var(--sage)"></div></div>
+            </div>
+            <div class="match-bar">
+                <div class="match-label"><span>ความเข้ากันของสี</span><span class="text-terra">{{ weight_color }}%</span></div>
+                <div class="bar-track"><div class="bar-fill" style="width:{{ weight_color }}%;background:var(--terra)"></div></div>
+            </div>
+
+            <button type="submit" class="btn-primary btn-block"><i class="ti ti-device-floppy"></i> บันทึกโปรไฟล์</button>
+            <a href="{% url 'accounts:logout' %}" class="btn-outline btn-block"><i class="ti ti-logout"></i> ออกจากระบบ</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

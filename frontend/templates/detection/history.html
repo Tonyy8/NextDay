@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block title %}ประวัติการวิเคราะห์ - Next Day{% endblock %}
+
+{% block content %}
+<section class="history-section">
+    <h1>ประวัติการวิเคราะห์</h1>
+
+    {% if analyses %}
+    <table class="history-table">
+        <thead>
+            <tr>
+                <th>รูปภาพ</th>
+                <th>ประเภท</th>
+                <th>ความมั่นใจ</th>
+                <th>สีหลัก</th>
+                <th>รูปทรง</th>
+                <th>วันที่</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in analyses %}
+            <tr>
+                <td>
+                    <a href="{% url 'detection:results' item.pk %}">
+                        {% if item.image %}
+                            <img src="{{ item.image.url }}" alt="{{ item.class_name }}" class="thumb">
+                        {% endif %}
+                    </a>
+                </td>
+                <td>{{ item.class_name }}</td>
+                <td>{% widthratio item.confidence 1 100 as conf_pct %}{{ conf_pct|floatformat:1 }}%</td>
+                <td>
+                    <span class="color-swatch" style="background-color: {{ item.primary_color_hex }}"></span>
+                    {{ item.primary_color_hex }}
+                </td>
+                <td>{{ item.shape_label }}</td>
+                <td>{{ item.created_at|date:"d/m/Y H:i" }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p class="empty-state">ยังไม่มีประวัติการวิเคราะห์</p>
+    {% endif %}
+
+    <div class="actions">
+        <a href="{% url 'detection:index' %}" class="btn btn-primary">วิเคราะห์รูปใหม่</a>
+    </div>
+</section>
+{% endblock %}

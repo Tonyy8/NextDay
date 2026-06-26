@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}อัปโหลด - NEXTDAY{% endblock %}
+{% block page_title %}อัปโหลดเสื้อผ้า{% endblock %}
+
+{% block content %}
+<div class="sub-page">
+    <div class="sub-hero">
+        <h1>อัปโหลดเสื้อผ้า</h1>
+        <p>{% if mock_mode %}ตัวอย่างหน้าจออัปโหลด — YOLO + สกัดสีจะทำงานเมื่อปิด Mockup{% else %}รองรับอัปโหลดทีละภาพ หรือหลายภาพพร้อมกัน (Batch Upload){% endif %}</p>
+    </div>
+
+    <div class="card upload-card-lg">
+        {% if mock_mode %}
+        <label class="upload-drop" id="upload-drop">
+            <input type="file" accept="image/*" multiple id="upload-input" hidden>
+            <div class="upload-drop-inner" id="upload-preview">
+                <i class="ti ti-photo-plus"></i>
+                <span>คลิกเลือกรูปเสื้อผ้า (หลายรูปได้)</span>
+                <small>ตัวอย่าง Mockup</small>
+            </div>
+        </label>
+        <button type="button" class="btn-primary" id="upload-btn"><i class="ti ti-upload"></i> อัปโหลดและวิเคราะห์</button>
+        <script>
+        (function () {
+            const input = document.getElementById("upload-input");
+            const preview = document.getElementById("upload-preview");
+            document.getElementById("upload-btn").addEventListener("click", function () {
+                alert("ยังเป็น Mockup — ยังไม่ได้วิเคราะห์ด้วย YOLO จริง");
+            });
+            input.addEventListener("change", function () {
+                const n = input.files.length;
+                if (!n) return;
+                preview.innerHTML = '<i class="ti ti-check"></i><span>เลือกแล้ว ' + n + ' รูป</span>';
+                preview.classList.add("has-image");
+            });
+        })();
+        </script>
+        {% else %}
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            <div class="form-group">
+                <label>เลือกรูปภาพเสื้อผ้า</label>
+                <input type="file" name="images" accept="image/*" multiple class="form-input" required>
+                <small class="help-text">YOLOv8 ตรวจจับ + Crop | OpenCV สกัดสี + ชื่อสีไทย</small>
+            </div>
+            <button type="submit" class="btn-primary"><i class="ti ti-upload"></i> อัปโหลดและวิเคราะห์</button>
+        </form>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

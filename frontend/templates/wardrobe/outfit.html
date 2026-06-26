@@ -1,0 +1,145 @@
+{% extends "base.html" %}
+{% block title %}แนะนำชุด - NEXTDAY{% endblock %}
+{% block page_title %}แนะนำชุด{% endblock %}
+
+{% block content %}
+<div class="sub-page outfit-page">
+    <div class="sub-hero">
+        <h1>แนะนำชุดแต่งกาย</h1>
+        <p>เลือกสถานที่ — AI จับคู่ชุดที่ดีที่สุด 3 ชุดให้ทันที</p>
+    </div>
+
+    <div class="steps steps-compact">
+        <span class="step {% if step >= 1 %}active{% endif %}"><i class="ti ti-map-pin"></i> เลือกสถานที่</span>
+        <span class="step-arrow"><i class="ti ti-chevron-right"></i></span>
+        <span class="step {% if step >= 2 %}active{% endif %}"><i class="ti ti-sparkles"></i> 3 ชุดที่ดีที่สุด</span>
+    </div>
+
+    {% if step == 1 %}
+    <div class="dest-grid dest-grid-lg">
+        {% for dest in destinations %}
+        <a href="?destination={{ dest.pk }}" class="dest-card dest-card-lg">
+            <span class="dest-icon">{{ dest.icon }}</span>
+            <strong>{{ dest.name }}</strong>
+            <span class="dest-meta">ความสุภาพ {{ dest.formality_level }}/6</span>
+            <small>{{ dest.description }}</small>
+            <span class="dest-cta">ดูชุดแนะนำ <i class="ti ti-arrow-right"></i></span>
+        </a>
+        {% empty %}
+        <p class="empty-hint">ยังไม่มีสถานที่ — รัน seed_demo</p>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if step == 2 and destination %}
+    <div class="outfit-result-header">
+        <div>
+            <a href="{% url 'wardrobe:outfit' %}" class="back-link"><i class="ti ti-arrow-left"></i> เปลี่ยนสถานที่</a>
+            <h2 class="section-title">{{ destination.icon }} {{ destination.name }}</h2>
+            <p class="section-sub">
+                ชุดที่ AI แนะนำ — กดที่เสื้อผ้าเพื่อสลับชิ้นอื่น
+                {% if matrix_weather %}<br><small>อากาศ: {{ matrix_weather }} · สไตล์: {{ matrix_style }}</small>{% endif %}
+            </p>
+        </div>
+        <span class="ai-badge"><i class="ti ti-sparkles"></i> Color Matching</span>
+    </div>
+
+    <div class="outfit-results">
+        {% for outfit in outfits %}
+        <article class="outfit-result-card {% if forloop.first %}best{% endif %}">
+            <div class="outfit-rank">
+                {% if forloop.first %}
+                    <span class="rank-badge rank-gold">#1 แนะนำสุด</span>
+                {% else %}
+                    <span class="rank-badge">#{{ outfit.rank }}</span>
+                {% endif %}
+                <span class="match-pill">{{ outfit.score|floatformat:0 }}%</span>
+            </div>
+
+            <div class="outfit-pair">
+                <a href="{{ outfit.swap_top_url }}" class="outfit-piece {% if swap_slot == forloop.counter0|stringformat:'s' and swap_piece == 'top' %}is-swapping{% endif %}">
+                    <div class="piece-img">
+                        <img src="{{ outfit.top.image.url }}" alt="">
+                        <span class="piece-edit"><i class="ti ti-replace"></i> สลับ</span>
+                    </div>
+                    <div class="piece-label">ท่อนบน</div>
+                    <div class="piece-name">{{ outfit.top.get_garment_type_display }}</div>
+                    <div class="piece-color"><span class="color-dot" style="background:{{ outfit.top.primary_color_hex }}"></span>{{ outfit.top.color_name_th }}</div>
+                </a>
+
+                <div class="pair-connector"><i class="ti ti-plus"></i></div>
+
+                <a href="{{ outfit.swap_bottom_url }}" class="outfit-piece {% if swap_slot == forloop.counter0|stringformat:'s' and swap_piece == 'bottom' %}is-swapping{% endif %}">
+                    <div class="piece-img">
+                        <img src="{{ outfit.bottom.image.url }}" alt="">
+                        <span class="piece-edit"><i class="ti ti-replace"></i> สลับ</span>
+                    </div>
+                    <div class="piece-label">ท่อนล่าง</div>
+                    <div class="piece-name">{{ outfit.bottom.get_garment_type_display }}</div>
+                    <div class="piece-color"><span class="color-dot" style="background:{{ outfit.bottom.primary_color_hex }}"></span>{{ outfit.bottom.color_name_th }}</div>
+                </a>
+            </div>
+
+            <div class="outfit-score-bar">
+                <div class="bar-track"><div class="bar-fill" style="width:{{ outfit.score }}%"></div></div>
+                <div class="score-breakdown">
+                    <div class="score-row">
+                        <span>ถูกต้อง (40%)</span>
+                        <div class="bar-track mini"><div class="bar-fill" style="width:{{ outfit.correctness_score }}%"></div></div>
+                        <span class="score-val">{{ outfit.correctness_score|floatformat:0 }}%</span>
+                    </div>
+                    <div class="score-row">
+                        <span>อากาศ (20%)</span>
+                        <div class="bar-track mini"><div class="bar-fill weather" style="width:{{ outfit.weather_score }}%"></div></div>
+                        <span class="score-val">{{ outfit.weather_score|floatformat:0 }}%</span>
+                    </div>
+                    <div class="score-row">
+                        <span>สี (40%)</span>
+                        <div class="bar-track mini"><div class="bar-fill color" style="width:{{ outfit.color_score }}%"></div></div>
+                        <span class="score-val">{{ outfit.color_score|floatformat:0 }}%</span>
+                    </div>
+                </div>
+                <span class="score-detail">{{ outfit.detail }}</span>
+            </div>
+
+            <form method="post" action="{% url 'wardrobe:save_outfit' %}" class="outfit-save-form">
+                {% csrf_token %}
+                <input type="hidden" name="top_id" value="{{ outfit.top.pk }}">
+                <input type="hidden" name="bottom_id" value="{{ outfit.bottom.pk }}">
+                <input type="hidden" name="destination_id" value="{{ destination.pk }}">
+                <input type="text" name="name" class="form-input" placeholder="ตั้งชื่อชุด (ไม่บังคับ)">
+                <button type="submit" class="btn-primary btn-block"><i class="ti ti-heart"></i> บันทึกชุดนี้</button>
+            </form>
+        </article>
+        {% empty %}
+        <p class="empty-hint">ไม่มีชุดที่เหมาะ — <a href="{% url 'wardrobe:upload' %}">อัปโหลดเสื้อผ้าเพิ่ม</a></p>
+        {% endfor %}
+    </div>
+
+    {% if swap_alternatives %}
+    <div class="swap-panel">
+        <div class="swap-panel-head">
+            <h3>สลับ{% if swap_piece == 'top' %}ท่อนบน{% else %}ท่อนล่าง{% endif %}</h3>
+            <a href="{{ outfit_base_url }}" class="swap-close"><i class="ti ti-x"></i></a>
+        </div>
+        <div class="swap-current">
+            ปัจจุบัน:
+            <span class="color-dot" style="background:{{ swap_current.primary_color_hex }}"></span>
+            {{ swap_current.get_garment_type_display }} สี{{ swap_current.color_name_th }}
+        </div>
+        <div class="swap-options">
+            {% for alt in swap_alternatives %}
+            <a href="{{ alt.url }}" class="swap-option">
+                <img src="{{ alt.item.image.url }}" alt="">
+                <div class="swap-option-info">
+                    <strong>{{ alt.item.get_garment_type_display }}</strong>
+                    <span><span class="color-dot" style="background:{{ alt.item.primary_color_hex }}"></span> {{ alt.item.color_name_th }}</span>
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+    {% endif %}
+</div>
+{% endblock %}

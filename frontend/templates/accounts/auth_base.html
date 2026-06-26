@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}NEXTDAY{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/auth.css?v=22">
+</head>
+<body class="auth-body">
+    <div class="auth-layout">
+        <aside class="auth-brand">
+            <div class="brand-inner">
+                <div class="brand-header">
+                    <div class="brand-logo">N</div>
+                    <span class="brand-name">NEXTDAY</span>
+                </div>
+
+                <div class="brand-content">
+                    <h1>จัดการตู้เสื้อผ้า<br>อย่างชาญฉลาด</h1>
+                    <p class="brand-subtitle">ให้ AI ช่วยวิเคราะห์สีและแนะนำชุดที่เหมาะกับทุกโอกาสให้คุณอัตโนมัติ</p>
+
+                    <ul class="brand-features">
+                        <li><span class="feature-icon"></span> สแกนสีเสื้อผ้าด้วย AI อัตโนมัติ</li>
+                        <li><span class="feature-icon"></span> แนะนำ 3 ชุดต่อวันตามโอกาส</li>
+                        <li><span class="feature-icon"></span> แชร์ลุคแฟชั่นในคอมมูนิตี้</li>
+                    </ul>
+                </div>
+
+                <div class="brand-stats">
+                    <div class="stat">
+                        <strong>48+</strong>
+                        <span>เสื้อผ้าในระบบ</span>
+                    </div>
+                    <div class="stat">
+                        <strong>3</strong>
+                        <span>ชุดแนะนำ/วัน</span>
+                    </div>
+                    <div class="stat">
+                        <strong>6</strong>
+                        <span>โอกาส</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="brand-decor brand-decor-1"></div>
+            <div class="brand-decor brand-decor-2"></div>
+            <div class="brand-decor brand-decor-3"></div>
+        </aside>
+
+        <main class="auth-main">
+            <div class="auth-card">
+                <div class="auth-tabs">
+                    <a href="{% url 'accounts:login' %}" class="auth-tab {% if active_tab == 'login' %}active{% endif %}">เข้าสู่ระบบ</a>
+                    <a href="{% url 'accounts:register' %}" class="auth-tab {% if active_tab == 'register' %}active{% endif %}">สมัครสมาชิก</a>
+                </div>
+
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="auth-alert auth-alert-{{ message.tags }}">{{ message }}</div>
+                    {% endfor %}
+                {% endif %}
+
+                {% block auth_content %}{% endblock %}
+
+                <div class="auth-guest-link">
+                    <a href="{% url 'wardrobe:community' %}"><i></i> ดูคอมมูนิตี้ก่อนสมัคร &rarr;</a>
+                </div>
+            </div>
+        </main>
+    </div>
+</body>
+</html>

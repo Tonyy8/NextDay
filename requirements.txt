@@ -1,0 +1,20 @@
+# Web framework
+Django>=5.0,<6.0
+
+# Environment variables
+django-environ>=0.11.2
+
+# Production server + static files
+gunicorn>=21.2.0
+whitenoise>=6.6.0
+
+# Computer vision (headless build — no GUI libs, smaller for cloud)
+opencv-python-headless>=4.9.0
+numpy>=1.26.0
+Pillow>=10.2.0
+
+# ── Optional: only needed for REAL (non-mock) AI detection & Postgres ──
+# Not installed on the cloud demo (MOCK_MODE=True) to keep the build small.
+# Uncomment if you turn MOCK_MODE off and need detection / Postgres:
+# ultralytics>=8.3.0
+# psycopg2-binary>=2.9.9

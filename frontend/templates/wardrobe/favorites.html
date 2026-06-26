@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}ชุดโปรด - NEXTDAY{% endblock %}
+{% block page_title %}ประวัติชุดโปรด{% endblock %}
+
+{% block content %}
+<div class="sub-page">
+    <div class="sub-hero">
+        <h1>คลังชุดโปรด</h1>
+        <p>ชุดที่แมตช์สำเร็จและบันทึกไว้</p>
+    </div>
+
+    {% if outfits %}
+    <div class="favorites-grid">
+        {% for outfit in outfits %}
+        <article class="favorite-card">
+            <div class="favorite-images">
+                <div class="favorite-piece">
+                    {% if outfit.top_item.image %}<img src="{{ outfit.top_item.image.url }}" alt="">{% endif %}
+                    <span>{{ outfit.top_item.get_garment_type_display }}</span>
+                </div>
+                <div class="favorite-plus"><i class="ti ti-plus"></i></div>
+                <div class="favorite-piece">
+                    {% if outfit.bottom_item.image %}<img src="{{ outfit.bottom_item.image.url }}" alt="">{% endif %}
+                    <span>{{ outfit.bottom_item.get_garment_type_display }}</span>
+                </div>
+            </div>
+            <div class="favorite-body">
+                <div class="favorite-head">
+                    <strong>{{ outfit.name|default:"ชุดโปรด" }}</strong>
+                    <span class="match-pill">{{ outfit.match_score|floatformat:0 }}%</span>
+                </div>
+                {% if outfit.destination %}
+                    <div class="favorite-dest">{{ outfit.destination.icon }} {{ outfit.destination.name }}</div>
+                {% endif %}
+                <p class="favorite-desc">
+                    {{ outfit.top_item.get_garment_type_display }} สี{{ outfit.top_item.color_name_th }}
+                    + {{ outfit.bottom_item.get_garment_type_display }} สี{{ outfit.bottom_item.color_name_th }}
+                </p>
+                <small class="favorite-theory">{{ outfit.match_theory }}</small>
+                <form method="post" action="{% url 'wardrobe:delete_favorite' outfit.pk %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn-outline btn-sm">ลบชุด</button>
+                </form>
+            </div>
+        </article>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p class="empty-hint">ยังไม่มีชุดโปรด — <a href="{% url 'wardrobe:outfit' %}">เลือกสถานที่เพื่อดูชุดแนะนำ</a></p>
+    {% endif %}
+</div>
+{% endblock %}

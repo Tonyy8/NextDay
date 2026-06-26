@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% block title %}คอมมูนิตี้ - NEXTDAY{% endblock %}
+
+{% block content %}
+<div class="sub-page community-page">
+    <div class="sub-hero row-between">
+        <div>
+            <h1>คอมมูนิตี้แฟชั่น</h1>
+            <p>แชร์ลุคที่ชอบ ให้ทุกคนใน NEXTDAY เห็นได้</p>
+        </div>
+        <span class="mock-badge">Mockup</span>
+    </div>
+
+    {% if not user.is_authenticated %}
+    <div class="guest-cta">
+        <div class="guest-cta-text">
+            <strong>กำลังดูแบบผู้เยี่ยมชม</strong>
+            <span>สมัครสมาชิกเพื่อจัดการตู้เสื้อผ้า รับชุดแนะนำจาก AI และแชร์ลุคของคุณเอง</span>
+        </div>
+        <div class="guest-cta-actions">
+            <a href="{% url 'accounts:register' %}" class="btn-primary">สมัครสมาชิก</a>
+            <a href="{% url 'accounts:login' %}" class="btn-outline">เข้าสู่ระบบ</a>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="community-layout {% if not user.is_authenticated %}guest-only{% endif %}">
+        {% if user.is_authenticated %}
+        <aside class="community-upload card">
+            <div class="card-label-dark">อัปโหลดลุคที่ชอบ</div>
+            <p class="upload-hint">เลือกรูปแฟชั่นที่อยากแชร์ (ตัวอย่างหน้าจอ)</p>
+
+            <label class="upload-drop" id="upload-drop">
+                <input type="file" accept="image/*" id="upload-input" hidden>
+                <div class="upload-drop-inner" id="upload-preview">
+                    <i class="ti ti-photo-plus"></i>
+                    <span>คลิกหรือลากรูปมาวาง</span>
+                    <small>JPG, PNG</small>
+                </div>
+            </label>
+
+            <div class="form-group">
+                <label for="caption">คำบรรยาย</label>
+                <input type="text" id="caption" class="form-input" placeholder="เช่น ลุคไปคาเฟ่วันหยุด">
+            </div>
+
+            <button type="button" class="btn-primary btn-block" id="upload-btn">
+                <i class="ti ti-upload"></i> แชร์ลุค
+            </button>
+        </aside>
+        {% endif %}
+
+        <section class="community-feed">
+            <div class="feed-header">
+                <span class="card-label-dark">ฟีดล่าสุด</span>
+                <span class="feed-count">{{ posts|length }} โพสต์</span>
+            </div>
+
+            <div class="community-grid">
+                {% for post in posts %}
+                <article class="community-card">
+                    <div class="community-card-head">
+                        <div class="community-author">
+                            <div class="avatar">{{ post.initial }}</div>
+                            <div>
+                                <div class="author-name">@{{ post.author }}</div>
+                                <div class="post-time">{{ post.time_ago }}</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="community-img-wrap">
+                        <img src="{{ post.image }}" alt="{{ post.caption }}" loading="lazy">
+                    </div>
+                    <div class="community-card-body">
+                        <p class="post-caption">{{ post.caption }}</p>
+                    </div>
+                </article>
+                {% endfor %}
+            </div>
+        </section>
+    </div>
+</div>
+
+{% if user.is_authenticated %}
+<script>
+(function () {
+    const input = document.getElementById("upload-input");
+    const preview = document.getElementById("upload-preview");
+    const btn = document.getElementById("upload-btn");
+
+    input.addEventListener("change", function () {
+        const file = input.files[0];
+        if (!file) return;
+        const url = URL.createObjectURL(file);
+        preview.innerHTML = '<img src="' + url + '" alt="preview">';
+        preview.classList.add("has-image");
+    });
+
+    btn.addEventListener("click", function () {
+        alert("ยังเป็น Mockup — ยังไม่ได้บันทึกลงระบบจริง");
+    });
+})();
+</script>
+{% endif %}
+{% endblock %}
