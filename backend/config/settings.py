@@ -83,7 +83,9 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "config.wsgi.application"
 
-if env("DB_ENGINE", default="postgresql") == "sqlite":
+# Mock demo uses SQLite (no Postgres driver needed on cloud free tier)
+_db_default = "sqlite" if MOCK_MODE else "postgresql"
+if env("DB_ENGINE", default=_db_default) == "sqlite":
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.sqlite3",
