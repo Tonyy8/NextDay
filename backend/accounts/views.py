@@ -8,11 +8,7 @@ from .forms import LoginForm, RegisterForm
 
 
 def home_view(request):
-    if settings.MOCK_MODE:
-        if request.session.get("mock_logged_out"):
-            return login_view(request)
-        return redirect("wardrobe:dashboard")
-    return login_view(request)
+    return redirect("accounts:login")
 
 
 @require_http_methods(["GET", "POST"])
