@@ -23,12 +23,13 @@ class MockUser:
 
 
 class MockAuthMiddleware:
-    """Auto-login a demo user when MOCK_MODE is on."""
+    """Auto-login demo user in MOCK_MODE after mock login succeeds."""
 
     def __init__(self, get_response):
         self.get_response = get_response
 
     def __call__(self, request):
         if getattr(settings, "MOCK_MODE", False):
-            request.user = MockUser()
+            if not request.session.get("mock_logged_out", True):
+                request.user = MockUser()
         return self.get_response(request)

@@ -5,7 +5,7 @@ services:
     plan: free
     autoDeploy: true
     buildCommand: bash render-build.sh
-    startCommand: gunicorn your_application.wsgi:application
+    startCommand: gunicorn your_application.wsgi:application --bind 0.0.0.0:$PORT
     envVars:
       - key: PYTHON_VERSION
         value: "3.12.6"

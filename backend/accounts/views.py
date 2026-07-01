@@ -8,8 +8,6 @@ from .forms import LoginForm, RegisterForm
 
 
 def home_view(request):
-    if settings.MOCK_MODE:
-        return redirect("wardrobe:dashboard")
     return redirect("accounts:login")
 
 
@@ -17,10 +15,12 @@ def home_view(request):
 def login_view(request):
     if settings.MOCK_MODE:
         if request.method == "POST":
-            request.session.pop("mock_logged_out", None)
+            request.session["mock_logged_out"] = False
             messages.success(request, "เข้าสู่ระบบสำเร็จ (Mockup)")
             return redirect("wardrobe:dashboard")
-        return redirect("wardrobe:dashboard")
+        if not request.session.get("mock_logged_out", True):
+            return redirect("wardrobe:dashboard")
+        return render(request, "accounts/login.html", {"form": LoginForm(), "active_tab": "login"})
 
     if request.user.is_authenticated:
         return redirect("wardrobe:dashboard")
@@ -40,10 +40,12 @@ def login_view(request):
 def register_view(request):
     if settings.MOCK_MODE:
         if request.method == "POST":
-            request.session.pop("mock_logged_out", None)
+            request.session["mock_logged_out"] = False
             messages.success(request, "สมัครสมาชิกสำเร็จ (Mockup)")
             return redirect("wardrobe:dashboard")
-        return redirect("wardrobe:dashboard")
+        if not request.session.get("mock_logged_out", True):
+            return redirect("wardrobe:dashboard")
+        return render(request, "accounts/register.html", {"form": RegisterForm(), "active_tab": "register"})
 
     if request.user.is_authenticated:
         return redirect("wardrobe:dashboard")
@@ -62,9 +64,9 @@ def register_view(request):
 
 def logout_view(request):
     if settings.MOCK_MODE:
-        request.session.pop("mock_logged_out", None)
+        request.session["mock_logged_out"] = True
         messages.info(request, "ออกจากระบบแล้ว (Mockup)")
-        return redirect("wardrobe:dashboard")
+        return redirect("accounts:login")
     logout(request)
     messages.info(request, "ออกจากระบบแล้ว")
     return redirect("accounts:login")
