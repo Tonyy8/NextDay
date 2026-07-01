@@ -4,9 +4,14 @@
 
 {% block content %}
 <div class="sub-page wardrobe-page">
-    <div class="sub-hero">
-        <h1>ตู้เสื้อผ้าดิจิทัล</h1>
-        <p>กดที่เสื้อผ้าเพื่อปรับประเภท ท่อน ความเป็นทางการ ความหนาผ้า และสี</p>
+    <div class="sub-hero row-between">
+        <div>
+            <h1>ตู้เสื้อผ้าดิจิทัล</h1>
+            <p>เสื้อผ้าทั้งหมด {{ total_items }} ชิ้น — กดที่การ์ดเพื่อแก้ไขใน Mockup</p>
+        </div>
+        {% if mock_mode %}
+        <span class="mock-badge">Mockup</span>
+        {% endif %}
     </div>
 
     <form method="get" class="search-bar">
@@ -16,6 +21,9 @@
     </form>
 
     {% if items %}
+    <p class="wardrobe-count">
+        แสดง {{ items|length }} ชิ้น{% if items|length != total_items %} จาก {{ total_items }} ชิ้น{% endif %}
+    </p>
     <div class="wardrobe-grid">
         {% for item in items %}
         <article class="wardrobe-card" data-item-id="{{ item.pk }}" data-edit-url="{% url 'wardrobe:edit' item.pk %}">
@@ -117,14 +125,14 @@
     const itemData = {
         {% for item in items %}
         {{ item.pk }}: {
-            url: "{% if item.image %}{{ item.image.url }}{% endif %}",
-            garment_type: "{{ item.garment_type }}",
-            part: "{{ item.part }}",
+            url: "{% if item.image %}{{ item.image.url|escapejs }}{% endif %}",
+            garment_type: "{{ item.garment_type|escapejs }}",
+            part: "{{ item.part|escapejs }}",
             formality: {{ item.formality }},
-            fabric_thickness: "{{ item.fabric_thickness }}",
-            color_name_th: "{{ item.color_name_th }}",
+            fabric_thickness: "{{ item.fabric_thickness|escapejs }}",
+            color_name_th: "{{ item.color_name_th|escapejs }}",
             primary_color_hex: "{{ item.primary_color_hex|lower }}",
-            label: "{{ item.get_garment_type_display }}"
+            label: "{{ item.get_garment_type_display|escapejs }}"
         }{% if not forloop.last %},{% endif %}
         {% endfor %}
     };

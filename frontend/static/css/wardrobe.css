@@ -343,8 +343,8 @@
 .hero-ai-banner span { font-size: 12px; color: #fff; flex: 1; }
 .hero-ai-banner i:last-child { color: #C4E2F5; font-size: 13px; }
 
-/* Wardrobe card */
-.wardrobe-card { grid-column: 2; grid-row: 1; }
+/* Dashboard outfit card placement */
+.home-grid .wardrobe-card { grid-column: 2; grid-row: 1; }
 
 .outfit-row { display: flex; gap: 8px; margin-top: 10px; }
 
@@ -1001,6 +1001,22 @@ select.form-input { cursor: pointer; }
 .swap-option-info strong { font-size: 12px; color: var(--wine); }
 
 /* ── Wardrobe grid + edit modal ── */
+.wardrobe-count {
+    font-size: 13px;
+    color: #5a7a9a;
+    margin: 0 0 12px;
+}
+
+.wardrobe-page .mock-badge {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--wine);
+    background: rgba(44, 94, 173, 0.08);
+    padding: 4px 10px;
+    border-radius: 20px;
+    white-space: nowrap;
+}
+
 .wardrobe-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));

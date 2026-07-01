@@ -119,6 +119,7 @@ def wardrobe_list(request):
 
     return render(request, "wardrobe/wardrobe.html", {
         "items": items,
+        "total_items": ClothingItem.objects.filter(user=request.user).count(),
         "form": form,
         "garment_types": GARMENT_TYPES,
         "color_choices": WARDROBE_COLORS,
@@ -132,7 +133,10 @@ def wardrobe_list(request):
 def wardrobe_edit(request, pk):
     if settings.MOCK_MODE:
         ctx = mock.item_edit_context(pk, request)
-        item = ctx["item"]
+        item = ctx.get("item")
+        if not item:
+            messages.error(request, "ไม่พบเสื้อผ้านี้")
+            return redirect("wardrobe:wardrobe")
         if request.method == "POST":
             form = ItemEditForm(request.POST)
             if form.is_valid():

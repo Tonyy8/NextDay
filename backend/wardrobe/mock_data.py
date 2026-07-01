@@ -33,13 +33,17 @@ SESSION_EDIT_KEY = "mock_item_edits"
 
 # Real fashion photos for the mockup (Unsplash)
 IMG = {
-    "top_white": "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=400&h=500&fit=crop",
+    "top_white": "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=400&h=500&fit=crop",    
     "top_blue": "https://images.unsplash.com/photo-1583743814966-8936f5b7be1a?w=400&h=500&fit=crop",
     "top_blouse": "https://images.unsplash.com/photo-1594633312681-425c7b97ccd1?w=400&h=500&fit=crop",
+    "top_blouse_pink": "https://images.unsplash.com/photo-1581044777550-4cfa60707c03?w=400&h=500&fit=crop",
     "top_jacket": "https://images.unsplash.com/photo-1551028719-00167b16eac5?w=400&h=500&fit=crop",
     "top_stripe": "https://images.unsplash.com/photo-1576566588028-4147f3842f27?w=400&h=500&fit=crop",
+    "top_tshirt_cream": "https://images.unsplash.com/photo-1503341504253-dff4815485f1?w=400&h=500&fit=crop",
     "top_polo": "https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=400&h=500&fit=crop",
+    "top_shirt_light_blue": "https://images.unsplash.com/photo-1596755094514-f87e34085b2c?w=400&h=500&fit=crop",
     "pants_navy": "https://images.unsplash.com/photo-1473966968600-fa801b869a1a?w=400&h=500&fit=crop",
+    "pants_blue": "https://images.unsplash.com/photo-1541099649105-f69ad21f3246?w=400&h=500&fit=crop",
     "pants_beige": "https://images.unsplash.com/photo-1594938298603-c8148c4dae35?w=400&h=500&fit=crop",
     "shorts": "https://images.unsplash.com/photo-1591195853828-11db59a44f6b?w=400&h=500&fit=crop",
     "skirt": "https://images.unsplash.com/photo-1583496661160-fb5886a0aaaa?w=400&h=500&fit=crop",
@@ -90,6 +94,7 @@ class MockClothingItem:
         primary_color_hex,
         image_url=None,
         color_name_th=None,
+        garment_type_display=None,
         needs_review=False,
         is_verified=True,
         created_offset_hours=0,
@@ -102,6 +107,7 @@ class MockClothingItem:
         self.fabric_thickness = fabric_thickness
         self.primary_color_hex = primary_color_hex
         self.color_name_th = color_name_th or thai_color_name(primary_color_hex)
+        self.garment_type_display = garment_type_display
         self.needs_review = needs_review
         self.is_verified = is_verified
         self.confidence = 0.92
@@ -113,6 +119,8 @@ class MockClothingItem:
         self.created_at = timezone.now() - timedelta(hours=created_offset_hours)
 
     def get_garment_type_display(self):
+        if self.garment_type_display:
+            return self.garment_type_display
         return GARMENT_LABELS.get(self.garment_type, self.garment_type)
 
     def get_fabric_thickness_display(self):
@@ -164,22 +172,18 @@ DESTINATIONS = [
 
 ITEMS = [
     # Tops
-    MockClothingItem(1, "top", "shirt", 4, "thin", "#f5f5f5", image_url=IMG["top_white"], color_name_th="ขาว", created_offset_hours=24),
-    MockClothingItem(2, "top", "t_shirt", 2, "thin", "#2c5ead", image_url=IMG["top_blue"], color_name_th="น้ำเงิน", created_offset_hours=48),
-    MockClothingItem(3, "top", "blouse", 4, "thin", "#f0e6d3", image_url=IMG["top_blouse"], color_name_th="ครีม", needs_review=True, is_verified=False, created_offset_hours=72),
-    MockClothingItem(4, "top", "jacket", 5, "thick", "#6b7280", image_url=IMG["top_jacket"], color_name_th="เทา", created_offset_hours=120),
-    MockClothingItem(5, "top", "t_shirt", 2, "thin", "#1e293b", image_url=IMG["top_stripe"], color_name_th="ลายทาง", created_offset_hours=168),
-    MockClothingItem(6, "top", "shirt", 3, "thin", "#93c5fd", image_url=IMG["top_polo"], color_name_th="ฟ้าอ่อน", created_offset_hours=240),
+    MockClothingItem(1, "top", "t_shirt", 4, "thin", "#f5f5f5", image_url=IMG["top_white"], color_name_th="ขาว", created_offset_hours=24),
+    MockClothingItem(2, "top", "t_shirt", 2, "thin", "#2c5ead", image_url=IMG["top_blue"], color_name_th="ดำ", created_offset_hours=48),
+    MockClothingItem(3, "top", "t_shirt", 4, "thin", "#fbcfe8", image_url=IMG["top_blouse_pink"], color_name_th="สีชมพูอ่อน", needs_review=True, is_verified=False, created_offset_hours=72),
+    MockClothingItem(4, "top", "t_shirt", 2, "thin", "#f5f5f5", image_url=IMG["top_stripe"], color_name_th="ขาวลายน้ำเงิน", created_offset_hours=168),
+    MockClothingItem(6, "top", "shirt", 3, "thin", "#93c5fd", image_url=IMG["top_shirt_light_blue"], color_name_th="ฟ้าอ่อน", created_offset_hours=240),
     # Bottoms
-    MockClothingItem(7, "bottom", "pants", 4, "medium", "#1e3a5f", image_url=IMG["pants_navy"], color_name_th="กรม", created_offset_hours=24),
-    MockClothingItem(8, "bottom", "pants", 3, "medium", "#d4b896", image_url=IMG["pants_beige"], color_name_th="เบจ", created_offset_hours=96),
-    MockClothingItem(9, "bottom", "shorts", 1, "thin", "#c4a574", image_url=IMG["shorts"], color_name_th="กากี", created_offset_hours=144),
+    MockClothingItem(7, "bottom", "pants", 4, "medium", "#d2b48c", image_url=IMG["pants_navy"], color_name_th="สีน้ำตาลอ่อน", created_offset_hours=24),
+    MockClothingItem(8, "bottom", "pants", 3, "medium", "#2c5ead", image_url=IMG["pants_blue"], color_name_th="สีน้ำเงิน", created_offset_hours=96),
+    MockClothingItem(9, "bottom", "shorts", 1, "thin", "#38bdf8", image_url=IMG["shorts"], color_name_th="สีฟ้า", created_offset_hours=144),
     MockClothingItem(10, "bottom", "skirt", 4, "thin", "#111827", image_url=IMG["skirt"], color_name_th="ดำ", created_offset_hours=192),
-    MockClothingItem(11, "bottom", "pants", 5, "thick", "#0f172a", image_url=IMG["pants_black"], color_name_th="ดำ", created_offset_hours=288),
-    MockClothingItem(12, "bottom", "pants", 3, "medium", "#faf3e8", image_url=IMG["pants_cream"], color_name_th="ครีม", created_offset_hours=336),
-    # ชุดทางการสีอื่น (เหมาะงานแต่ง — เลี่ยงดำ/ขาว)
-    MockClothingItem(13, "top", "blouse", 5, "thin", "#efe3cf", image_url=IMG["top_blouse"], color_name_th="ครีม", created_offset_hours=360),
-    MockClothingItem(14, "bottom", "pants", 5, "medium", "#1e3a5f", image_url=IMG["pants_navy"], color_name_th="กรม", created_offset_hours=384),
+    MockClothingItem(11, "bottom", "pants", 5, "thick", "#111827", image_url=IMG["pants_black"], color_name_th="ดำ", garment_type_display="กางเกงยีน", created_offset_hours=288),
+    MockClothingItem(12, "bottom", "pants", 3, "medium", "#86efac", image_url=IMG["pants_cream"], color_name_th="สีเขียวอ่อน", created_offset_hours=336),
 ]
 
 def _find(pk):
@@ -196,10 +200,10 @@ FAVORITES = [
 ]
 
 COMMUNITY_POSTS = [
-    {"author": "mint", "initial": "M", "caption": "ชุปเกาหลีวันหยุด ☁️", "time_ago": "2 ชม.", "image": "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=600&h=750&fit=crop"},
-    {"author": "nara", "initial": "N", "caption": "ลุคออฟฟิศสีเอิร์ธโทน", "time_ago": "5 ชม.", "image": "https://images.unsplash.com/photo-1483985988355-763728e1935b?w=600&h=750&fit=crop"},
-    {"author": "beam", "initial": "B", "caption": "แจ็คเก็ตยีนส์ + กางเกงขายาว", "time_ago": "เมื่อวาน", "image": "https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=600&h=750&fit=crop"},
-    {"author": "ploy", "initial": "P", "caption": "สไตล์มินิมอล โทนขาวดำ", "time_ago": "เมื่อวาน", "image": "https://images.unsplash.com/photo-1469334031218-e382a71b716b?w=600&h=750&fit=crop"},
+    {"author": "mint", "initial": "M", "caption": "ชุดออกกำลังกาย", "time_ago": "2 ชม.", "image": "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=600&h=750&fit=crop"},
+    {"author": "nara", "initial": "N", "caption": "ลุคไฮโซ", "time_ago": "5 ชม.", "image": "https://images.unsplash.com/photo-1483985988355-763728e1935b?w=600&h=750&fit=crop"},
+    {"author": "beam", "initial": "B", "caption": "ชุดไปทำงาน", "time_ago": "เมื่อวาน", "image": "https://plusprinting.bookplus.co.th/wp-content/uploads/2023/01/simple-office-outfit-ideas-07.jpg"},
+    {"author": "ploy", "initial": "P", "caption": "ชุดไปทะเลชิวๆ", "time_ago": "เมื่อวาน", "image": "https://images.unsplash.com/photo-1469334031218-e382a71b716b?w=600&h=750&fit=crop"},
     {"author": "tong", "initial": "T", "caption": "เดรสสีพาสเทลไปเดท", "time_ago": "2 วัน", "image": "https://images.unsplash.com/photo-1539008835657-9e8e9680c956?w=600&h=750&fit=crop"},
     {"author": "fah", "initial": "F", "caption": "สตรีทแวร์วันหยุด", "time_ago": "3 วัน", "image": "https://images.unsplash.com/photo-1529139574466-a303027c1d8b?w=600&h=750&fit=crop"},
 ]
@@ -226,6 +230,8 @@ def _items_with_edits(request):
                 fabric_thickness=data.get("fabric_thickness", base.fabric_thickness),
                 primary_color_hex=data.get("primary_color_hex", base.primary_color_hex),
                 image_url=base.image.url,
+                color_name_th=data.get("color_name_th", base.color_name_th),
+                garment_type_display=data.get("garment_type_display", base.garment_type_display),
                 needs_review=False,
                 is_verified=True,
             )
@@ -250,13 +256,28 @@ def get_destination(pk):
 
 
 def save_item_edit(request, pk, cleaned_data):
+    from wardrobe.forms import color_label_for_hex, snap_to_palette
+
+    base = _find(int(pk))
+    hex_code = cleaned_data["primary_color_hex"]
+    if base and hex_code == snap_to_palette(base.primary_color_hex):
+        color_name_th = base.color_name_th
+    else:
+        color_name_th = color_label_for_hex(hex_code)
+
+    garment_type_display = None
+    if base and cleaned_data["garment_type"] == base.garment_type:
+        garment_type_display = base.garment_type_display
+
     edits = request.session.get(SESSION_EDIT_KEY, {})
     edits[str(pk)] = {
         "garment_type": cleaned_data["garment_type"],
         "part": cleaned_data["part"],
         "formality": int(cleaned_data["formality"]),
         "fabric_thickness": cleaned_data["fabric_thickness"],
-        "primary_color_hex": cleaned_data["primary_color_hex"],
+        "primary_color_hex": hex_code,
+        "color_name_th": color_name_th,
+        "garment_type_display": garment_type_display,
     }
     request.session[SESSION_EDIT_KEY] = edits
     request.session.modified = True
@@ -363,17 +384,24 @@ def dashboard_context(request):
 
 def wardrobe_context(request):
     form = WardrobeSearchForm(request.GET or None)
-    items = _items_with_edits(request)
+    all_items = _items_with_edits(request)
+    items = list(all_items)
     if form.is_valid():
         q = form.cleaned_data.get("q")
         gt = form.cleaned_data.get("garment_type")
         if q:
             ql = q.lower()
-            items = [i for i in items if ql in i.color_name_th.lower() or ql in i.garment_type.lower()]
+            items = [
+                i for i in items
+                if ql in i.color_name_th.lower()
+                or ql in i.garment_type.lower()
+                or ql in i.get_garment_type_display().lower()
+            ]
         if gt:
             items = [i for i in items if i.garment_type == gt]
     return {
         "items": items,
+        "total_items": len(all_items),
         "form": form,
         "garment_types": GARMENT_TYPES,
         "color_choices": WARDROBE_COLORS,

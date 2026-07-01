@@ -8,6 +8,8 @@ from .forms import LoginForm, RegisterForm
 
 
 def home_view(request):
+    if settings.MOCK_MODE:
+        return redirect("wardrobe:dashboard")
     return redirect("accounts:login")
 
 
