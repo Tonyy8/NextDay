@@ -20,7 +20,7 @@ def login_view(request):
             request.session.pop("mock_logged_out", None)
             messages.success(request, "เข้าสู่ระบบสำเร็จ (Mockup)")
             return redirect("wardrobe:dashboard")
-        return render(request, "accounts/login.html", {"form": LoginForm(), "active_tab": "login"})
+        return redirect("wardrobe:dashboard")
 
     if request.user.is_authenticated:
         return redirect("wardrobe:dashboard")
@@ -43,7 +43,7 @@ def register_view(request):
             request.session.pop("mock_logged_out", None)
             messages.success(request, "สมัครสมาชิกสำเร็จ (Mockup)")
             return redirect("wardrobe:dashboard")
-        return render(request, "accounts/register.html", {"form": RegisterForm(), "active_tab": "register"})
+        return redirect("wardrobe:dashboard")
 
     if request.user.is_authenticated:
         return redirect("wardrobe:dashboard")
@@ -62,9 +62,9 @@ def register_view(request):
 
 def logout_view(request):
     if settings.MOCK_MODE:
-        request.session["mock_logged_out"] = True
+        request.session.pop("mock_logged_out", None)
         messages.info(request, "ออกจากระบบแล้ว (Mockup)")
-        return redirect("accounts:login")
+        return redirect("wardrobe:dashboard")
     logout(request)
     messages.info(request, "ออกจากระบบแล้ว")
     return redirect("accounts:login")

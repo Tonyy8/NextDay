@@ -2,6 +2,7 @@
 Django settings for Next Day App - Clothing Detection System.
 """
 
+import os
 from pathlib import Path
 
 import environ
@@ -21,6 +22,10 @@ SECRET_KEY = env("SECRET_KEY", default="django-insecure-dev-key-change-in-produc
 DEBUG = env("DEBUG")
 ALLOWED_HOSTS = env("ALLOWED_HOSTS")
 MOCK_MODE = env("MOCK_MODE")
+
+# Render cloud demo: default to mock/demo flow when env is not set explicitly
+if env.bool("RENDER", default=False) and "MOCK_MODE" not in os.environ:
+    MOCK_MODE = True
 
 # Allow any host when running in DEBUG (e.g. sharing via a tunnel / LAN / cloud demo)
 if DEBUG:
