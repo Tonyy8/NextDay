@@ -4,9 +4,8 @@ services:
     runtime: python
     plan: free
     autoDeploy: true
-    buildCommand: "pip install -r requirements.txt && pip install -e . && python manage.py collectstatic --noinput && python manage.py migrate"
-    # Do NOT use the Render default "gunicorn your_application.wsgi" — this app lives under backend/config/
-    startCommand: "gunicorn config.wsgi:application --chdir backend"
+    buildCommand: bash render-build.sh
+    startCommand: gunicorn your_application.wsgi:application
     envVars:
       - key: PYTHON_VERSION
         value: "3.12.6"

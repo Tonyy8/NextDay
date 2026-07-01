@@ -1,0 +1,50 @@
+name: Deploy Render
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Django checks
+        run: python manage.py check
+        env:
+          MOCK_MODE: "True"
+          DEBUG: "True"
+          DB_ENGINE: sqlite
+          SECRET_KEY: ci-secret-key
+
+      - name: Collect static files
+        run: python manage.py collectstatic --noinput
+        env:
+          MOCK_MODE: "True"
+          DEBUG: "True"
+          DB_ENGINE: sqlite
+          SECRET_KEY: ci-secret-key
+
+  deploy:
+    needs: verify
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Render deploy hook
+        env:
+          RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+        run: |
+          if [ -z "$RENDER_DEPLOY_HOOK_URL" ]; then
+            echo "RENDER_DEPLOY_HOOK_URL secret is not set."
+            echo "Deploy manually in Render Dashboard > Manual Deploy."
+            exit 0
+          fi
+          curl -fsS -X POST "$RENDER_DEPLOY_HOOK_URL"
