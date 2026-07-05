@@ -1,0 +1,28 @@
+{% extends "outfit/base.html" %}
+{% block title %}อัปโหลด — NEXTDAY{% endblock %}
+{% block content %}
+<h1 class="mb-2 text-2xl font-bold">อัปโหลดเสื้อผ้า</h1>
+<p class="mb-6 text-sm text-stone-500">Part 1: YOLOv8 → OpenCV K-Means → บันทึก Matrix B</p>
+
+<form method="post" enctype="multipart/form-data" class="space-y-4 rounded-2xl border bg-white p-5 shadow-sm">
+  {% csrf_token %}
+  <div>
+    <label class="text-xs font-semibold uppercase text-stone-500">รูปภาพ</label>
+    <input type="file" name="image" accept="image/*" capture="environment" required
+           class="mt-2 w-full rounded-xl border border-dashed border-rose-200 p-4">
+  </div>
+  <div>
+    <label class="text-xs font-semibold uppercase text-stone-500">ชื่อ (ไม่บังคับ)</label>
+    <input name="name" class="mt-1 w-full rounded-xl border px-3 py-2" placeholder="เช่น เสื้อยืดครีม">
+  </div>
+  <div>
+    <label class="text-xs font-semibold uppercase text-stone-500">ประเภท (AI เดาให้ แก้ได้)</label>
+    <select name="garment_type" class="mt-1 w-full rounded-xl border px-3 py-2">
+      {% for val, label in garment_choices %}
+        <option value="{{ val }}">{{ label }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <button type="submit" class="w-full rounded-2xl bg-rose-500 py-3 font-semibold text-white">สแกนและบันทึก</button>
+</form>
+{% endblock %}

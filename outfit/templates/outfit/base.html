@@ -1,0 +1,31 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}NEXTDAY{% endblock %}</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="{% static 'outfit/app.css' %}">
+</head>
+<body class="min-h-screen bg-black text-stone-900 antialiased">
+  <div class="pointer-events-none fixed inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_-20%,rgba(251,113,133,0.15),transparent)]"></div>
+  <div class="relative mx-auto max-w-lg px-4 pb-28 pt-5">
+    {% if messages %}
+      {% for message in messages %}
+        <p class="mb-4 rounded-2xl px-4 py-3 text-sm {% if message.tags == 'error' %}bg-red-50 text-red-800{% elif message.tags == 'warning' %}bg-amber-50 text-amber-900{% else %}bg-emerald-50 text-emerald-900{% endif %}">{{ message }}</p>
+      {% endfor %}
+    {% endif %}
+    {% block content %}{% endblock %}
+  </div>
+  <nav class="fixed bottom-0 inset-x-0 z-50 border-t border-stone-200 bg-white/90 px-4 py-3 backdrop-blur">
+    <div class="mx-auto flex max-w-lg justify-around text-xs font-medium">
+      <a href="{% url 'home' %}" class="{% if request.resolver_match.url_name == 'home' %}text-rose-600{% else %}text-stone-400{% endif %}">หน้าแรก</a>
+      <a href="{% url 'closet' %}" class="{% if request.resolver_match.url_name == 'closet' %}text-rose-600{% else %}text-stone-400{% endif %}">ตู้</a>
+      <a href="{% url 'upload' %}" class="-mt-6 flex h-12 w-12 items-center justify-center rounded-2xl bg-rose-500 text-lg text-white shadow-lg">+</a>
+      <a href="{% url 'recommend' %}" class="{% if request.resolver_match.url_name == 'recommend' %}text-rose-600{% else %}text-stone-400{% endif %}">แนะนำ</a>
+      <a href="/admin/" class="text-stone-400">admin</a>
+    </div>
+  </nav>
+</body>
+</html>
