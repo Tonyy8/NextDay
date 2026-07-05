@@ -6,35 +6,23 @@
 <div class="sub-page">
     <div class="sub-hero">
         <h1>อัปโหลดเสื้อผ้า</h1>
-        <p>{% if mock_mode %}ตัวอย่างหน้าจออัปโหลด — YOLO + สกัดสีจะทำงานเมื่อปิด Mockup{% else %}รองรับอัปโหลดทีละภาพ หรือหลายภาพพร้อมกัน (Batch Upload){% endif %}</p>
+        <p>{% if mock_mode %}เลือกรูปเสื้อผ้าจริง ระบบจะวิเคราะห์สีหลักและเพิ่มเข้าตู้เสื้อผ้าให้อัตโนมัติ{% else %}รองรับอัปโหลดทีละภาพ หรือหลายภาพพร้อมกัน (Batch Upload){% endif %}</p>
     </div>
 
     <div class="card upload-card-lg">
         {% if mock_mode %}
-        <label class="upload-drop" id="upload-drop">
-            <input type="file" accept="image/*" multiple id="upload-input" hidden>
-            <div class="upload-drop-inner" id="upload-preview">
-                <i class="ti ti-photo-plus"></i>
-                <span>คลิกเลือกรูปเสื้อผ้า (หลายรูปได้)</span>
-                <small>ตัวอย่าง Mockup</small>
-            </div>
-        </label>
-        <button type="button" class="btn-primary" id="upload-btn"><i class="ti ti-upload"></i> อัปโหลดและวิเคราะห์</button>
-        <script>
-        (function () {
-            const input = document.getElementById("upload-input");
-            const preview = document.getElementById("upload-preview");
-            document.getElementById("upload-btn").addEventListener("click", function () {
-                alert("ยังเป็น Mockup — ยังไม่ได้วิเคราะห์ด้วย YOLO จริง");
-            });
-            input.addEventListener("change", function () {
-                const n = input.files.length;
-                if (!n) return;
-                preview.innerHTML = '<i class="ti ti-check"></i><span>เลือกแล้ว ' + n + ' รูป</span>';
-                preview.classList.add("has-image");
-            });
-        })();
-        </script>
+        <form method="post" enctype="multipart/form-data" id="upload-form">
+            {% csrf_token %}
+            <label class="upload-drop" id="upload-drop">
+                <input type="file" name="images" accept="image/*" multiple id="upload-input" required hidden>
+                <div class="upload-drop-inner" id="upload-preview">
+                    <i class="ti ti-photo-plus"></i>
+                    <span>คลิกเลือกรูปเสื้อผ้า (หลายรูปได้)</span>
+                    <small>ระบบจะวิเคราะห์สีหลักจากรูปจริง</small>
+                </div>
+            </label>
+            <button type="submit" class="btn-primary" id="upload-btn"><i class="ti ti-upload"></i> อัปโหลดและวิเคราะห์</button>
+        </form>
         {% else %}
         <form method="post" enctype="multipart/form-data">
             {% csrf_token %}
@@ -48,4 +36,45 @@
         {% endif %}
     </div>
 </div>
+
+{% if mock_mode %}
+<div class="analyze-overlay" id="analyze-overlay" aria-hidden="true">
+    <div class="analyze-box">
+        <div class="analyze-ring"><span></span><span></span><span></span></div>
+        <div class="analyze-bar"><div class="analyze-bar-fill"></div></div>
+        <p class="analyze-status" id="analyze-status">กำลังวิเคราะห์...</p>
+        <small>AI กำลังประมวลผลรูปเสื้อผ้าของคุณ</small>
+    </div>
+</div>
+<script>
+(function () {
+    const form = document.getElementById("upload-form");
+    const input = document.getElementById("upload-input");
+    const preview = document.getElementById("upload-preview");
+    const btn = document.getElementById("upload-btn");
+    const overlay = document.getElementById("analyze-overlay");
+    const statusEl = document.getElementById("analyze-status");
+    const steps = ["กำลังอ่านรูปภาพ...", "กำลังตรวจจับเสื้อผ้า...", "กำลังแยกสีหลัก...", "กำลังตั้งชื่อสี...", "กำลังบันทึก..."];
+    input.addEventListener("change", function () {
+        const n = input.files.length;
+        if (!n) return;
+        preview.innerHTML = '<i class="ti ti-check"></i><span>เลือกแล้ว ' + n + ' รูป</span>';
+        preview.classList.add("has-image");
+    });
+    form.addEventListener("submit", function () {
+        if (!input.files.length) return;
+        btn.disabled = true;
+        btn.classList.add("is-loading");
+        btn.innerHTML = '<i class="ti ti-loader-2 spin"></i> กำลังวิเคราะห์...';
+        overlay.classList.add("show");
+        let i = 0;
+        statusEl.textContent = steps[0];
+        setInterval(function () {
+            i = (i + 1) % steps.length;
+            statusEl.textContent = steps[i];
+        }, 900);
+    });
+})();
+</script>
+{% endif %}
 {% endblock %}

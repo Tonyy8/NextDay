@@ -30,6 +30,8 @@ DEMO_EMAIL = "demo@nextday.app"
 
 GARMENT_LABELS = dict(GARMENT_TYPES)
 SESSION_EDIT_KEY = "mock_item_edits"
+SESSION_UPLOAD_KEY = "mock_uploaded_items"
+UPLOAD_PK_BASE = 1000
 
 # Real fashion photos for the mockup (Unsplash)
 IMG = {
@@ -58,7 +60,7 @@ def _placeholder(hex_code: str) -> str:
         '<svg xmlns="http://www.w3.org/2000/svg" width="320" height="380">'
         f'<rect width="100%" height="100%" fill="{hex_code}"/>'
         '<rect x="0" y="0" width="100%" height="100%" fill="rgba(0,0,0,0.04)"/>'
-        '</svg>'
+        '</svg>' 
     )
     encoded = base64.b64encode(svg.encode("utf-8")).decode("ascii")
     return f"data:image/svg+xml;base64,{encoded}"
@@ -209,14 +211,119 @@ COMMUNITY_POSTS = [
 ]
 
 
+# ── Image analysis for uploads (Pillow-only, no heavy AI deps) ────────────────
+
+def _rgb_to_hex(r: int, g: int, b: int) -> str:
+    return "#{:02x}{:02x}{:02x}".format(int(r), int(g), int(b))
+
+
+def _extract_dominant_color(image) -> str:
+    """Find the main garment colour from a real photo, skipping plain white/black
+    backgrounds when a more saturated colour is available."""
+    img = image.convert("RGB")
+    img.thumbnail((80, 80))
+    quant = img.quantize(colors=8)
+    palette = quant.getpalette()
+    counts = sorted(quant.getcolors() or [], reverse=True)
+    fallback = None
+    for _count, idx in counts:
+        r, g, b = palette[idx * 3], palette[idx * 3 + 1], palette[idx * 3 + 2]
+        if fallback is None:
+            fallback = (r, g, b)
+        mx, mn = max(r, g, b), min(r, g, b)
+        if mx > 244 and mn > 238:  # near-white background
+            continue
+        if mx < 26:  # near-black background
+            continue
+        return _rgb_to_hex(r, g, b)
+    if fallback:
+        return _rgb_to_hex(*fallback)
+    return "#9ca3af"
+
+
+def _image_to_data_uri(image) -> str:
+    """Downscale + JPEG-encode as a base64 data URI so no media files are needed."""
+    import io
+
+    img = image.convert("RGB")
+    img.thumbnail((400, 500))
+    buf = io.BytesIO()
+    img.save(buf, format="JPEG", quality=80)
+    encoded = base64.b64encode(buf.getvalue()).decode("ascii")
+    return f"data:image/jpeg;base64,{encoded}"
+
+
+def add_uploaded_items(request, files):
+    """Analyse each uploaded photo (dominant colour + Thai colour name) and store
+    it in the session so it appears across the mock wardrobe. Garment type defaults
+    to a top and is flagged for review so the user can correct it."""
+    from PIL import Image
+
+    uploads = request.session.get(SESSION_UPLOAD_KEY, [])
+    next_pk = UPLOAD_PK_BASE + len(uploads)
+    created = []
+    for f in files:
+        try:
+            image = Image.open(f)
+            # Fast path for large phone JPEGs: decode at reduced size (much quicker)
+            try:
+                image.draft("RGB", (600, 750))
+            except Exception:
+                pass
+            image.load()
+        except Exception:
+            continue
+        hex_code = _extract_dominant_color(image)
+        record = {
+            "pk": next_pk,
+            "part": "top",
+            "garment_type": "t_shirt",
+            "formality": 3,
+            "fabric_thickness": "medium",
+            "primary_color_hex": hex_code,
+            "color_name_th": thai_color_name(hex_code),
+            "image": _image_to_data_uri(image),
+            "needs_review": True,
+        }
+        uploads.append(record)
+        created.append(record)
+        next_pk += 1
+
+    request.session[SESSION_UPLOAD_KEY] = uploads
+    request.session.modified = True
+    return created
+
+
 # ── Session-based item edits ──────────────────────────────────────────────────
+
+def _all_base_items(request):
+    """Static demo items plus any photos the user uploaded this session."""
+    items = list(ITEMS)
+    for rec in request.session.get(SESSION_UPLOAD_KEY, []):
+        items.append(
+            MockClothingItem(
+                pk=rec["pk"],
+                part=rec["part"],
+                garment_type=rec["garment_type"],
+                formality=rec["formality"],
+                fabric_thickness=rec["fabric_thickness"],
+                primary_color_hex=rec["primary_color_hex"],
+                image_url=rec["image"],
+                color_name_th=rec.get("color_name_th"),
+                needs_review=rec.get("needs_review", False),
+                is_verified=not rec.get("needs_review", False),
+            )
+        )
+    return items
+
 
 def _items_with_edits(request):
     edits = request.session.get(SESSION_EDIT_KEY, {})
+    base_items = _all_base_items(request)
     if not edits:
-        return list(ITEMS)
+        return base_items
     result = []
-    for base in ITEMS:
+    for base in base_items:
         data = edits.get(str(base.pk))
         if not data:
             result.append(base)
@@ -245,6 +352,11 @@ def get_item(pk, request):
         if item.pk == pk:
             return item
     return None
+
+
+def get_items_by_pks(request, pks):
+    wanted = {int(p) for p in pks}
+    return [item for item in _items_with_edits(request) if item.pk in wanted]
 
 
 def get_destination(pk):

@@ -20,7 +20,7 @@ def login_view(request):
             return redirect("wardrobe:dashboard")
         if not request.session.get("mock_logged_out", True):
             return redirect("wardrobe:dashboard")
-        return render(request, "accounts/login.html", {"form": LoginForm(), "active_tab": "login"})
+        return render(request, "pages/auth/login.html", {"form": LoginForm(), "active_tab": "login"})
 
     if request.user.is_authenticated:
         return redirect("wardrobe:dashboard")
@@ -33,7 +33,7 @@ def login_view(request):
             messages.success(request, "เข้าสู่ระบบสำเร็จ")
             return redirect("wardrobe:dashboard")
 
-    return render(request, "accounts/login.html", {"form": form, "active_tab": "login"})
+    return render(request, "pages/auth/login.html", {"form": form, "active_tab": "login"})
 
 
 @require_http_methods(["GET", "POST"])
@@ -45,7 +45,7 @@ def register_view(request):
             return redirect("wardrobe:dashboard")
         if not request.session.get("mock_logged_out", True):
             return redirect("wardrobe:dashboard")
-        return render(request, "accounts/register.html", {"form": RegisterForm(), "active_tab": "register"})
+        return render(request, "pages/auth/register.html", {"form": RegisterForm(), "active_tab": "register"})
 
     if request.user.is_authenticated:
         return redirect("wardrobe:dashboard")
@@ -59,7 +59,7 @@ def register_view(request):
             messages.success(request, "สมัครสมาชิกสำเร็จ ยินดีต้อนรับสู่ NEXTDAY")
             return redirect("wardrobe:dashboard")
 
-    return render(request, "accounts/register.html", {"form": form, "active_tab": "register"})
+    return render(request, "pages/auth/register.html", {"form": form, "active_tab": "register"})
 
 
 def logout_view(request):

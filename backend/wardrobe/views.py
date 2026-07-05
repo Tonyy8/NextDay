@@ -75,6 +75,18 @@ def dashboard(request):
 @require_http_methods(["GET", "POST"])
 def upload(request):
     if settings.MOCK_MODE:
+        if request.method == "POST":
+            files = request.FILES.getlist("images")
+            if not files:
+                messages.error(request, "กรุณาเลือกรูปภาพ")
+                return redirect("wardrobe:upload")
+            created = mock.add_uploaded_items(request, files)
+            if not created:
+                messages.error(request, "ไม่สามารถอ่านไฟล์รูปได้ ลองใหม่อีกครั้ง")
+                return redirect("wardrobe:upload")
+            request.session["mock_last_upload"] = [rec["pk"] for rec in created]
+            request.session.modified = True
+            return redirect("wardrobe:upload_result")
         return render(request, "wardrobe/upload.html")
 
     if request.method == "POST":
@@ -97,6 +109,17 @@ def upload(request):
         return redirect("wardrobe:wardrobe")
 
     return render(request, "wardrobe/upload.html")
+
+
+@login_required
+def upload_result(request):
+    if not settings.MOCK_MODE:
+        return redirect("wardrobe:wardrobe")
+    pks = request.session.get("mock_last_upload", [])
+    items = mock.get_items_by_pks(request, pks)
+    if not items:
+        return redirect("wardrobe:upload")
+    return render(request, "wardrobe/upload_result.html", {"items": items})
 
 
 @login_required

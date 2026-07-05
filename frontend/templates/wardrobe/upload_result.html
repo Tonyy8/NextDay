@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}ผลการวิเคราะห์ - NEXTDAY{% endblock %}
+{% block page_title %}ผลการวิเคราะห์{% endblock %}
+
+{% block content %}
+<div class="sub-page">
+    <div class="sub-hero row-between">
+        <div>
+            <h1>ผลการวิเคราะห์เสื้อผ้า</h1>
+            <p>วิเคราะห์สีหลักจากรูปจริง {{ items|length }} ชิ้น — ตรวจสอบและแก้ประเภทให้ถูกได้</p>
+        </div>
+        {% if mock_mode %}
+        <span class="mock-badge">Mockup</span>
+        {% endif %}
+    </div>
+
+    <div class="save-banner">
+        <i class="ti ti-circle-check"></i>
+        <span>บันทึกแล้ว {{ items|length }} ชิ้น เข้าตู้เสื้อผ้าเรียบร้อย</span>
+    </div>
+
+    <div class="result-grid">
+        {% for item in items %}
+        <article class="result-card card">
+            <div class="result-card-img">
+                {% if item.image %}<img src="{{ item.image.url }}" alt="เสื้อผ้าที่อัปโหลด">{% endif %}
+                {% if item.needs_review %}<span class="result-badge">รอตรวจ</span>{% endif %}
+            </div>
+            <div class="result-card-body">
+                <div class="result-detected">
+                    <span class="result-swatch" style="background: {{ item.primary_color_hex }}"></span>
+                    <div class="result-detected-text">
+                        <strong>{{ item.color_name_th }}</strong>
+                        <small>{{ item.primary_color_hex }}</small>
+                    </div>
+                </div>
+                <ul class="result-attrs">
+                    <li><span>ประเภท</span><b>{{ item.get_garment_type_display }}</b></li>
+                    <li><span>ท่อน</span><b>{% if item.part == 'top' %}ท่อนบน{% else %}ท่อนล่าง{% endif %}</b></li>
+                    <li><span>ทางการ</span><b>{{ item.formality }}/6</b></li>
+                    <li><span>ความหนาผ้า</span><b>{{ item.get_fabric_thickness_display }}</b></li>
+                </ul>
+                <a href="{% url 'wardrobe:edit' item.pk %}" class="btn-outline btn-block">
+                    <i class="ti ti-pencil"></i> แก้ประเภท / สี
+                </a>
+            </div>
+        </article>
+        {% endfor %}
+    </div>
+
+    <div class="result-actions">
+        <a href="{% url 'wardrobe:wardrobe' %}" class="btn-primary"><i class="ti ti-checkbox"></i> ไปที่ตู้เสื้อผ้า</a>
+        <a href="{% url 'wardrobe:upload' %}" class="btn-outline"><i class="ti ti-photo-plus"></i> อัปโหลดเพิ่ม</a>
+    </div>
+</div>
+{% endblock %}
