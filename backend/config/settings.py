@@ -22,6 +22,8 @@ SECRET_KEY = env("SECRET_KEY", default="django-insecure-dev-key-change-in-produc
 DEBUG = env("DEBUG")
 ALLOWED_HOSTS = env("ALLOWED_HOSTS")
 MOCK_MODE = env("MOCK_MODE")
+OPENWEATHER_API_KEY = env("OPENWEATHER_API_KEY", default="")
+WEATHER_CITY = env("WEATHER_CITY", default="Ubon Ratchathani")
 
 # Render cloud demo: default to mock/demo flow when env is not set explicitly
 if env.bool("RENDER", default=False) and "MOCK_MODE" not in os.environ:
@@ -64,6 +66,7 @@ MIDDLEWARE = [
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "wardrobe.middleware.MockAuthMiddleware",
+    "wardrobe.middleware.MockLoginGateMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
@@ -124,6 +127,9 @@ USE_TZ = True
 STATIC_URL = "static/"
 STATICFILES_DIRS = [ROOT_DIR / "frontend" / "static"]
 STATIC_ROOT = ROOT_DIR / "staticfiles"
+
+# Dev: read CSS/JS directly from frontend/static (no collectstatic needed)
+WHITENOISE_USE_FINDERS = DEBUG
 
 # Serve static files via WhiteNoise (works under gunicorn in production)
 STORAGES = {

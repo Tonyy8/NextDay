@@ -1,56 +1,126 @@
 {% extends "base.html" %}
-{% block title %}ผลการวิเคราะห์ - NEXTDAY{% endblock %}
-{% block page_title %}ผลการวิเคราะห์{% endblock %}
+{% block title %}ตรวจผลก่อนบันทึก - NEXTDAY{% endblock %}
+{% block page_title %}ตรวจผลก่อนบันทึก{% endblock %}
 
 {% block content %}
 <div class="sub-page">
     <div class="sub-hero row-between">
         <div>
-            <h1>ผลการวิเคราะห์เสื้อผ้า</h1>
-            <p>วิเคราะห์สีหลักจากรูปจริง {{ items|length }} ชิ้น — ตรวจสอบและแก้ประเภทให้ถูกได้</p>
+            <h1>ตรวจผลก่อนบันทึก</h1>
+            <p>วิเคราะห์แล้ว {{ items|length }} ชิ้น — ยังไม่เข้าตู้เสื้อผ้า จนกว่าคุณจะกดบันทึก</p>
         </div>
-        {% if mock_mode %}
-        <span class="mock-badge">Mockup</span>
-        {% endif %}
     </div>
 
-    <div class="save-banner">
-        <i class="ti ti-circle-check"></i>
-        <span>บันทึกแล้ว {{ items|length }} ชิ้น เข้าตู้เสื้อผ้าเรียบร้อย</span>
+    <div class="review-banner">
+        <i class="ti ti-info-circle"></i>
+        <div>
+            <strong>ยังไม่ได้บันทึก</strong>
+            <span>ติ๊กเลือกชิ้นที่ต้องการเก็บ · กด <em>บันทึกที่เลือก</em> เพื่อใส่ตู้ · หรือกด <em>ไม่บันทึก</em> เพื่อยกเลิกทั้งหมด</span>
+        </div>
     </div>
 
-    <div class="result-grid">
-        {% for item in items %}
-        <article class="result-card card">
-            <div class="result-card-img">
-                {% if item.image %}<img src="{{ item.image.url }}" alt="เสื้อผ้าที่อัปโหลด">{% endif %}
-                {% if item.needs_review %}<span class="result-badge">รอตรวจ</span>{% endif %}
-            </div>
-            <div class="result-card-body">
-                <div class="result-detected">
-                    <span class="result-swatch" style="background: {{ item.primary_color_hex }}"></span>
-                    <div class="result-detected-text">
-                        <strong>{{ item.color_name_th }}</strong>
-                        <small>{{ item.primary_color_hex }}</small>
-                    </div>
+    <form method="post" id="confirm-form">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="confirm" id="form-action">
+
+        <div class="result-toolbar">
+            <label class="select-all-label">
+                <input type="checkbox" id="select-all" checked>
+                <span>เลือกทั้งหมด ({{ items|length }} ชิ้น)</span>
+            </label>
+            <span class="selected-count" id="selected-count">{{ items|length }} ชิ้นที่จะบันทึก</span>
+        </div>
+
+        <div class="result-grid">
+            {% for item in items %}
+            <article class="result-card card result-card-selectable">
+                <label class="result-select">
+                    <input type="checkbox" name="selected" value="{{ item.pk }}" class="item-select" checked>
+                    <span class="result-select-mark"><i class="ti ti-check"></i></span>
+                </label>
+                <div class="result-card-img">
+                    {% if item.image %}<img src="{{ item.image.url }}" alt="เสื้อผ้าที่วิเคราะห์">{% endif %}
+                    {% if item.needs_review %}<span class="result-badge">แนะนำตรวจสอบ</span>{% endif %}
                 </div>
-                <ul class="result-attrs">
-                    <li><span>ประเภท</span><b>{{ item.get_garment_type_display }}</b></li>
-                    <li><span>ท่อน</span><b>{% if item.part == 'top' %}ท่อนบน{% else %}ท่อนล่าง{% endif %}</b></li>
-                    <li><span>ทางการ</span><b>{{ item.formality }}/6</b></li>
-                    <li><span>ความหนาผ้า</span><b>{{ item.get_fabric_thickness_display }}</b></li>
-                </ul>
-                <a href="{% url 'wardrobe:edit' item.pk %}" class="btn-outline btn-block">
-                    <i class="ti ti-pencil"></i> แก้ประเภท / สี
-                </a>
-            </div>
-        </article>
-        {% endfor %}
-    </div>
+                <div class="result-card-body">
+                    <div class="result-detected">
+                        <span class="result-swatch" style="background: {{ item.primary_color_hex }}"></span>
+                        <div class="result-detected-text">
+                            <strong>{{ item.color_name_th }}</strong>
+                            <small>{{ item.primary_color_hex }}</small>
+                        </div>
+                    </div>
+                    <ul class="result-attrs">
+                        <li><span>ประเภท</span><b>{{ item.get_garment_type_display }}</b></li>
+                        <li><span>ท่อน</span><b>{% if item.part == 'top' %}ท่อนบน{% else %}ท่อนล่าง{% endif %}</b></li>
+                        <li><span>ทางการ</span><b>{{ item.formality }}/6</b></li>
+                        <li><span>ความหนาผ้า</span><b>{{ item.get_fabric_thickness_display }}</b></li>
+                    </ul>
+                    <p class="result-hint">หลังบันทึกแล้ว แก้ประเภท/สีได้ที่ตู้เสื้อผ้า</p>
+                </div>
+            </article>
+            {% endfor %}
+        </div>
 
-    <div class="result-actions">
-        <a href="{% url 'wardrobe:wardrobe' %}" class="btn-primary"><i class="ti ti-checkbox"></i> ไปที่ตู้เสื้อผ้า</a>
-        <a href="{% url 'wardrobe:upload' %}" class="btn-outline"><i class="ti ti-photo-plus"></i> อัปโหลดเพิ่ม</a>
-    </div>
+        <div class="result-actions result-actions-split">
+            <button type="submit" class="btn-primary" id="save-selected-btn">
+                <i class="ti ti-device-floppy"></i> บันทึกที่เลือก (<span id="save-count">{{ items|length }}</span> ชิ้น)
+            </button>
+            <button type="button" class="btn-outline" id="discard-btn">
+                <i class="ti ti-x"></i> ไม่บันทึก — ยกเลิกทั้งหมด
+            </button>
+        </div>
+    </form>
+
+    <form method="post" id="discard-form" hidden>
+        {% csrf_token %}
+        <input type="hidden" name="action" value="discard">
+    </form>
 </div>
+
+<script>
+(function () {
+    const selectAll = document.getElementById("select-all");
+    const boxes = Array.from(document.querySelectorAll(".item-select"));
+    const countEl = document.getElementById("selected-count");
+    const saveCountEl = document.getElementById("save-count");
+    const saveBtn = document.getElementById("save-selected-btn");
+    const confirmForm = document.getElementById("confirm-form");
+    const discardForm = document.getElementById("discard-form");
+    const discardBtn = document.getElementById("discard-btn");
+
+    function updateCounts() {
+        const n = boxes.filter(function (b) { return b.checked; }).length;
+        countEl.textContent = n + " ชิ้นที่จะบันทึก";
+        saveCountEl.textContent = n;
+        selectAll.checked = n === boxes.length && boxes.length > 0;
+        selectAll.indeterminate = n > 0 && n < boxes.length;
+        saveBtn.disabled = n === 0;
+    }
+
+    selectAll.addEventListener("change", function () {
+        boxes.forEach(function (b) { b.checked = selectAll.checked; });
+        updateCounts();
+    });
+
+    boxes.forEach(function (b) {
+        b.addEventListener("change", updateCounts);
+    });
+
+    confirmForm.addEventListener("submit", function (e) {
+        if (!boxes.some(function (b) { return b.checked; })) {
+            e.preventDefault();
+            alert("กรุณาเลือกอย่างน้อย 1 ชิ้น หรือกดไม่บันทึกเพื่อยกเลิก");
+        }
+    });
+
+    discardBtn.addEventListener("click", function () {
+        if (confirm("ยกเลิกการบันทึกทั้งหมด?\nรูปที่วิเคราะห์ในครั้งนี้จะไม่เข้าตู้เสื้อผ้า")) {
+            discardForm.submit();
+        }
+    });
+
+    updateCounts();
+})();
+</script>
 {% endblock %}

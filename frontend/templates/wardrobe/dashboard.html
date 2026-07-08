@@ -1,142 +1,116 @@
 {% extends "base.html" %}
 {% block title %}หน้าหลัก - NEXTDAY{% endblock %}
-{% block page_title %}หน้าหลัก{% endblock %}
+{% block page_title %}<span data-i18n="page.dashboard">หน้าหลัก</span>{% endblock %}
 
 {% block content %}
 <div class="home-grid">
 
-    <!-- Hero -->
-    <div class="hero-card">
-        <div class="hero-title">ยินดีต้อนรับ</div>
-        <div class="hero-name">{{ username }} ✦</div>
-        <div class="mini-stat">
-            <div class="ms-item">
-                <div class="ms-val">{{ total }}</div>
-                <div class="ms-lab">เสื้อผ้าทั้งหมด</div>
+    <!-- ── Editorial hero band ── -->
+    <section class="ed-hero">
+        {% if weather %}
+        <div class="ed-hero-weather" aria-label="สภาพอากาศปัจจุบัน">
+            <div class="ed-weather-top">
+                <div class="ed-weather-loc">
+                    <i class="ti ti-map-pin"></i>
+                    <span>{{ weather.city }}</span>
+                </div>
+                <span class="ed-weather-band">{{ weather.band_label }}</span>
             </div>
-            <div class="ms-item">
-                <div class="ms-val">{{ favorites_count }}</div>
-                <div class="ms-lab">ชุดบันทึกไว้</div>
+            <div class="ed-weather-main">
+                <i class="ti ti-{{ weather.icon }} ed-weather-icon" aria-hidden="true"></i>
+                <span class="ed-weather-temp">{{ weather.temp_c|floatformat:0 }}<span class="ed-weather-unit">°C</span></span>
             </div>
-            <div class="ms-item">
-                <div class="ms-val">{{ suggest_today }}</div>
-                <div class="ms-lab">ชุดแนะนำวันนี้</div>
+            <p class="ed-weather-desc">{{ weather.description }}</p>
+            <div class="ed-weather-details">
+                <div class="ed-weather-detail">
+                    <span class="ed-weather-detail-label">รู้สึกเหมือน</span>
+                    <strong>{{ weather.feels_like_c|floatformat:0 }}°</strong>
+                </div>
+                <div class="ed-weather-detail">
+                    <span class="ed-weather-detail-label">ความชื้น</span>
+                    <strong>{{ weather.humidity }}%</strong>
+                </div>
             </div>
         </div>
-        <a href="{% url 'wardrobe:outfit' %}" class="hero-ai-banner">
-            <i class="ti ti-sparkles"></i>
-            <span>AI กำลังแนะนำชุดสำหรับวันนี้...</span>
-            <i class="ti ti-arrow-right"></i>
+        {% endif %}
+        <div class="ed-hero-copy">
+            <span class="ed-hero-eyebrow">Where timeless fashion meets modern elegance</span>
+            <h1 class="ed-hero-title">NEXT<span class="thin">DAY</span></h1>
+            <p class="ed-hero-sub">ยินดีต้อนรับ, {{ username }} — ชุดของวันพรุ่งนี้เริ่มที่นี่</p>
+        </div>
+        <a href="{% url 'wardrobe:outfit' %}" class="ed-hero-cta">
+            <span class="ed-hero-cta-icon" aria-hidden="true"><i class="ti ti-sparkles"></i></span>
+            <span class="ed-hero-cta-text">
+                <strong data-i18n="dash.hero_cta">เริ่มจัดชุด</strong>
+                <small data-i18n="dash.hero_cta_hint">AI แนะนำชุดตามอากาศวันนี้</small>
+            </span>
         </a>
+    </section>
+
+    <!-- ── LATEST TRENDS + Exclusive offer ── -->
+    <div class="ed-section-head">
+        <div>
+            <span class="ed-eyebrow" data-i18n="dash.trends_eyebrow">Explore the range</span>
+            <h2 data-i18n="dash.trends_title">Latest Trends</h2>
+        </div>
+        <a href="{% url 'wardrobe:wardrobe' %}" data-i18n="dash.trends_link">ดูตู้เสื้อผ้าทั้งหมด →</a>
     </div>
 
-    <!-- Today's outfit -->
-    <div class="card wardrobe-card">
-        <div class="row-between">
-            <div>
-                <div class="card-label">ชุดแนะนำวันนี้</div>
-                <div class="card-title-sm">
-                    {% if latest_fav and latest_fav.destination %}{{ latest_fav.destination.name }}{% else %}เลือกโอกาส{% endif %}
-                </div>
-            </div>
-            {% if latest_fav %}
-                <span class="badge badge-sage">Color match: {{ latest_fav.match_score|floatformat:0 }}%</span>
-            {% else %}
-                <span class="badge badge-terra">ยังไม่มีชุด</span>
-            {% endif %}
-        </div>
-        <div class="outfit-row">
-            {% if latest_fav %}
-            <div class="outfit-slot">
-                <div class="slot-icon" style="background:#dceef8">
-                    {% if latest_fav.top_item.image %}
-                        <img src="{{ latest_fav.top_item.image.url }}" alt="">
-                    {% else %}
-                        <i class="ti ti-shirt" style="color:var(--blue-deep)"></i>
-                    {% endif %}
-                </div>
-                <div class="slot-name">{{ latest_fav.top_item.get_garment_type_display }}</div>
-                <div class="slot-color">{{ latest_fav.top_item.color_name_th }}</div>
-            </div>
-            <div class="outfit-slot">
-                <div class="slot-icon" style="background:#d6effc">
-                    {% if latest_fav.bottom_item.image %}
-                        <img src="{{ latest_fav.bottom_item.image.url }}" alt="">
-                    {% else %}
-                        <i class="ti ti-shirt" style="color:var(--blue-main)"></i>
-                    {% endif %}
-                </div>
-                <div class="slot-name">{{ latest_fav.bottom_item.get_garment_type_display }}</div>
-                <div class="slot-color">{{ latest_fav.bottom_item.color_name_th }}</div>
-            </div>
-            {% else %}
-            <div class="outfit-slot empty-slot">
-                <i class="ti ti-shirt"></i>
-                <div class="slot-name">ท่อนบน</div>
-            </div>
-            <div class="outfit-slot empty-slot">
-                <i class="ti ti-shirt"></i>
-                <div class="slot-name">ท่อนล่าง</div>
-            </div>
-            {% endif %}
-        </div>
-        <div class="outfit-actions">
-            <a href="{% url 'wardrobe:outfit' %}" class="btn-wine"><i class="ti ti-heart"></i> จัดชุด</a>
-            <a href="{% url 'wardrobe:outfit' %}" class="btn-outline"><i class="ti ti-refresh"></i> สลับชุด</a>
-        </div>
+    <div class="card ed-trends-card">
+        {% for stat in destinations %}
+        <a href="{% url 'wardrobe:outfit' %}?destination={{ stat.dest.pk }}" class="ed-trend-row">
+            <span class="etr-name">{{ stat.dest.icon }} {{ stat.dest.name }}</span>
+            <span class="etr-count">{{ stat.count }} <span data-i18n="dash.collections">Collections</span></span>
+        </a>
+        {% empty %}
+        <p class="empty-hint">ยังไม่มีโอกาส — รัน seed_demo</p>
+        {% endfor %}
     </div>
 
-    <!-- Sustainable tip -->
-    <div class="suggest-card">
-        <div class="suggest-title">Sustainable tip</div>
-        <div class="suggest-heading">
-            {% if unused_count %}คุณมีเสื้อผ้าที่ยังไม่ได้ยืนยันถึง {{ unused_count }} ชิ้น{% else %}ตู้เสื้อผ้าของคุณพร้อมใช้งานแล้ว{% endif %}
+    <!-- ── HOT PRODUCT — recent items as product cards ── -->
+    <div class="ed-section-head">
+        <div>
+            <span class="ed-eyebrow" data-i18n="dash.hot_eyebrow">Fresh in your closet</span>
+            <h2 data-i18n="dash.hot_title">Hot Product</h2>
         </div>
-        <div class="suggest-tags">
-            <span class="stag">ลด Fast Fashion</span>
-            <span class="stag">ใช้ของที่มี</span>
-            <span class="stag">ประหยัด</span>
-        </div>
-        <a href="{% url 'wardrobe:wardrobe' %}" class="suggest-btn"><i class="ti ti-eye"></i> ดูเสื้อผ้าทั้งหมด</a>
+        <a href="{% url 'wardrobe:upload' %}" data-i18n="dash.hot_link">+ อัปโหลดเสื้อผ้า</a>
     </div>
 
-    <!-- Recent items -->
-    <div class="card history-card">
-        <div class="row-between">
-            <div class="card-label card-label-dark">เสื้อผ้าล่าสุด</div>
-            <a href="{% url 'wardrobe:wardrobe' %}" class="link-terra">ดูทั้งหมด</a>
-        </div>
+    <div class="ed-product-grid">
         {% for item in recent %}
-        <div class="item-row">
-            <div class="item-icon" style="background:#dceef8">
+        <a href="{% url 'wardrobe:wardrobe' %}" class="ed-product">
+            <div class="ed-product-img">
+                {% if item.formality >= 4 %}<span class="ed-tag">ทางการ</span>{% endif %}
+                <span class="ed-heart"><i class="ti ti-heart"></i></span>
                 {% if item.image %}
-                    <img src="{{ item.image.url }}" alt="" class="item-thumb">
+                    <img src="{{ item.image.url }}" alt="">
                 {% else %}
-                    <i class="ti ti-shirt" style="color:var(--blue-deep)"></i>
+                    <span class="ph"><i class="ti ti-shirt"></i></span>
                 {% endif %}
             </div>
-            <div class="item-info">
-                <div class="item-name">{{ item.get_garment_type_display }} {{ item.color_name_th }}</div>
-                <div class="item-sub">เพิ่มเมื่อ {{ item.created_at|timesince }}ที่แล้ว</div>
+            <div class="ed-product-body">
+                <strong>{{ item.get_garment_type_display }}</strong>
+                <span class="edp-sub">เพิ่มเมื่อ {{ item.created_at|timesince }}ที่แล้ว</span>
+                <span class="edp-meta">
+                    <span class="edp-dot" style="background:{{ item.primary_color_hex|default:'#ccc' }}"></span>
+                    <span class="edp-sub">{{ item.color_name_th }}</span>
+                </span>
             </div>
-            <span class="badge {% if item.formality >= 4 %}badge-wine{% elif item.formality >= 2 %}badge-sage{% else %}badge-terra{% endif %}">
-                {% if item.formality >= 5 %}ทางการ{% elif item.formality >= 3 %}กึ่งทางการ{% else %}สบายๆ{% endif %}
-            </span>
-        </div>
+        </a>
         {% empty %}
         <p class="empty-hint">ยังไม่มีเสื้อผ้า — <a href="{% url 'wardrobe:upload' %}">อัปโหลดเลย</a></p>
         {% endfor %}
     </div>
 
-    <!-- Occasions -->
+    <!-- ── Occasions ── -->
     <div class="card occasion-card">
-        <div class="card-label card-label-dark">เลือกโอกาส</div>
+        <div class="occasion-card-head" data-i18n="dash.occasion">เลือกโอกาส</div>
         <div class="occ-list">
             {% for stat in destinations %}
-            <a href="{% url 'wardrobe:outfit' %}?destination={{ stat.dest.pk }}" class="occ-item {% if forloop.first %}active{% endif %}">
+            <a href="{% url 'wardrobe:outfit' %}?destination={{ stat.dest.pk }}" class="occ-item">
                 <span class="occ-icon">{{ stat.dest.icon }}</span>
                 <span class="occ-name">{{ stat.dest.name }}</span>
-                <span class="occ-count">{{ stat.count }} ชิ้น</span>
+                <span class="occ-count">{{ stat.count }} <span data-i18n="dash.pieces">ชิ้น</span></span>
             </a>
             {% empty %}
             <p class="empty-hint">ยังไม่มีสถานที่ — รัน seed_demo</p>
@@ -144,10 +118,10 @@
         </div>
     </div>
 
-    <!-- Colors -->
+    <!-- ── Colors ── -->
     <div class="card color-card">
-        <div class="card-label card-label-dark">สีในตู้เสื้อผ้า</div>
-        <div class="color-row">
+        <div class="color-card-head" data-i18n="dash.colors">สีในตู้เสื้อผ้า</div>
+        <div class="color-palette">
             {% for c in unique_colors %}
             <div class="color-chip">
                 <div class="color-dot" style="background:{{ c.hex }}"></div>
@@ -157,17 +131,19 @@
             <span class="empty-hint">ยังไม่มีสีในตู้</span>
             {% endfor %}
         </div>
-        <div class="match-bar">
-            <div class="match-label"><span>Color Wheel Match</span><span class="text-sage">{{ match_score }}%</span></div>
-            <div class="bar-track"><div class="bar-fill" style="width:{{ match_score }}%;background:var(--sage)"></div></div>
-        </div>
-        <div class="match-bar">
-            <div class="match-label"><span>ความหลากหลาย</span><span class="text-terra">{{ diversity }}%</span></div>
-            <div class="bar-track"><div class="bar-fill" style="width:{{ diversity }}%;background:var(--terra)"></div></div>
-        </div>
-        <div class="match-bar">
-            <div class="match-label"><span>ความเป็นทางการ</span><span class="text-wine">{{ formality_pct }}%</span></div>
-            <div class="bar-track"><div class="bar-fill" style="width:{{ formality_pct }}%;background:var(--wine)"></div></div>
+        <div class="color-stats">
+            <div class="match-bar">
+                <div class="match-label"><span data-i18n="dash.match_color">ความเข้ากันของสี</span><span class="text-sage">{{ match_score }}%</span></div>
+                <div class="bar-track"><div class="bar-fill" style="width:{{ match_score }}%;background:var(--sage)"></div></div>
+            </div>
+            <div class="match-bar">
+                <div class="match-label"><span data-i18n="dash.diversity">ความหลากหลาย</span><span class="text-terra">{{ diversity }}%</span></div>
+                <div class="bar-track"><div class="bar-fill" style="width:{{ diversity }}%;background:var(--terra)"></div></div>
+            </div>
+            <div class="match-bar">
+                <div class="match-label"><span data-i18n="dash.formality">ความเป็นทางการ</span><span class="text-wine">{{ formality_pct }}%</span></div>
+                <div class="bar-track"><div class="bar-fill" style="width:{{ formality_pct }}%;background:var(--wine)"></div></div>
+            </div>
         </div>
     </div>
 

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from database.garment_catalog import get_base_garment_type, is_full_outfit
 from database.models import BOTTOM_TYPES, TOP_TYPES
 
 from .color_utils import lab_distance, thai_color_name
@@ -20,6 +21,7 @@ from .outfit_engine import ColorMatcher, OutfitSuggestion
 WEIGHT_CORRECTNESS = 0.40
 WEIGHT_WEATHER = 0.20
 WEIGHT_COLOR = 0.40
+FULL_OUTFIT_COLOR_SCORE = 88.0
 
 
 @dataclass
@@ -66,11 +68,12 @@ def _color_category(b: MatrixB) -> str:
 
 
 def passes_hard_filter(b: MatrixB, matrix_a: MatrixA) -> bool:
-    if b.garment_type not in matrix_a.allowed_categories:
+    base_type = get_base_garment_type(b.garment_type)
+    if base_type not in matrix_a.allowed_categories:
         return False
     if matrix_a.avoid_colors and _color_category(b) in matrix_a.avoid_colors:
         return False
-    rules = matrix_a.garment_rules.get(b.garment_type)
+    rules = matrix_a.garment_rules.get(base_type)
     if not rules:
         return b.formality <= matrix_a.formality_level + 1
     if not (rules["formality_min"] <= b.formality <= rules["formality_max"]):
@@ -81,7 +84,8 @@ def passes_hard_filter(b: MatrixB, matrix_a: MatrixA) -> bool:
 
 
 def score_correctness(b: MatrixB, matrix_a: MatrixA) -> float:
-    rules = matrix_a.garment_rules.get(b.garment_type)
+    base_type = get_base_garment_type(b.garment_type)
+    rules = matrix_a.garment_rules.get(base_type)
     if not rules:
         target = matrix_a.formality_level
         delta = abs(b.formality - target)
@@ -122,31 +126,68 @@ class OutfitScoringEngine:
         matrix_bs = [build_matrix_b(i) for i in user_items]
         eligible = [b for b in matrix_bs if passes_hard_filter(b, matrix_a)]
 
-        tops = [b for b in eligible if b.part == "top" or b.garment_type in TOP_TYPES]
+        full_pieces = [b for b in eligible if is_full_outfit(b.garment_type)]
+        tops = [
+            b for b in eligible
+            if (b.part == "top" or b.garment_type in TOP_TYPES)
+            and not is_full_outfit(b.garment_type)
+        ]
         bottoms = [b for b in eligible if b.part == "bottom" or b.garment_type in BOTTOM_TYPES]
 
-        pairs: list[OutfitSuggestion] = []
+        candidates: list[OutfitSuggestion] = []
         for top in tops:
             for bottom in bottoms:
-                pairs.append(self._score_pair(top, bottom, matrix_a))
+                candidates.append(self._score_pair(top, bottom, matrix_a))
+        for piece in full_pieces:
+            candidates.append(self._score_full_outfit(piece, matrix_a))
 
-        pairs.sort(key=lambda x: x.score, reverse=True)
+        candidates.sort(key=lambda x: x.score, reverse=True)
 
         results: list[OutfitSuggestion] = []
-        used_tops: set[int] = set()
-        for pair in pairs:
-            if pair.top.pk in used_tops:
+        used_items: set[int] = set()
+        for outfit in candidates:
+            if outfit.top.pk in used_items:
                 continue
-            used_tops.add(pair.top.pk)
-            pair.rank = len(results) + 1
-            results.append(pair)
+            used_items.add(outfit.top.pk)
+            outfit.rank = len(results) + 1
+            results.append(outfit)
             if len(results) >= count:
                 break
 
         if slot_overrides:
-            self._apply_overrides(results, slot_overrides, tops, bottoms, matrix_a)
+            self._apply_overrides(results, slot_overrides, tops, bottoms, full_pieces, matrix_a)
 
         return results
+
+    def _score_full_outfit(self, piece: MatrixB, matrix_a: MatrixA) -> OutfitSuggestion:
+        corr = score_correctness(piece, matrix_a)
+        weather = score_weather(piece, matrix_a.weather)
+        color = FULL_OUTFIT_COLOR_SCORE
+
+        total = (
+            WEIGHT_CORRECTNESS * corr
+            + WEIGHT_WEATHER * weather
+            + WEIGHT_COLOR * color
+        )
+
+        theory = f"ถูกต้อง {corr:.0f}% · อากาศ {weather:.0f}% · ชุดเซ็ต"
+        detail = (
+            f"{STYLE_LABELS.get(matrix_a.style, matrix_a.style)} / "
+            f"{WEATHER_LABELS.get(matrix_a.weather, matrix_a.weather)} · "
+            "ชุดชิ้นเดียว ไม่ต้องจับคู่ท่อนบน/ล่าง"
+        )
+
+        return OutfitSuggestion(
+            top=piece.raw,
+            bottom=None,
+            score=round(total, 1),
+            theory=theory,
+            detail=detail,
+            correctness_score=round(corr, 1),
+            weather_score=round(weather, 1),
+            color_score=round(color, 1),
+            is_full_outfit=True,
+        )
 
     def _score_pair(self, top: MatrixB, bottom: MatrixB, matrix_a: MatrixA) -> OutfitSuggestion:
         corr = (score_correctness(top, matrix_a) + score_correctness(bottom, matrix_a)) / 2
@@ -176,29 +217,45 @@ class OutfitScoringEngine:
             correctness_score=round(corr, 1),
             weather_score=round(weather, 1),
             color_score=round(color, 1),
+            is_full_outfit=False,
         )
 
-    def _apply_overrides(self, results, overrides, tops, bottoms, matrix_a):
+    def _apply_overrides(self, results, overrides, tops, bottoms, full_pieces, matrix_a):
         top_map = {b.pk: b for b in tops}
         bottom_map = {b.pk: b for b in bottoms}
+        full_map = {b.pk: b for b in full_pieces}
         for idx, slots in overrides.items():
             if idx >= len(results):
                 continue
-            top_b, bottom_b = None, None
-            if "top" in slots and slots["top"] in top_map:
-                top_b = top_map[slots["top"]]
-                results[idx].top = top_b.raw
-            if "bottom" in slots and slots["bottom"] in bottom_map:
-                bottom_b = bottom_map[slots["bottom"]]
-                results[idx].bottom = bottom_b.raw
+            top_pk = slots.get("top")
+            bottom_pk = slots.get("bottom")
+
+            if top_pk in full_map and not bottom_pk:
+                rescored = self._score_full_outfit(full_map[top_pk], matrix_a)
+                rescored.rank = results[idx].rank
+                results[idx] = rescored
+                continue
+
+            top_b = None
+            bottom_b = None
+            if top_pk in top_map:
+                top_b = top_map[top_pk]
+            elif top_pk in full_map:
+                top_b = full_map[top_pk]
+            if bottom_pk in bottom_map:
+                bottom_b = bottom_map[bottom_pk]
+
             if top_b is None:
                 top_b = build_matrix_b(results[idx].top)
-            if bottom_b is None:
+            if bottom_b is None and not results[idx].is_full_outfit:
                 bottom_b = build_matrix_b(results[idx].bottom)
-            rescored = self._score_pair(top_b, bottom_b, matrix_a)
-            results[idx].score = rescored.score
-            results[idx].theory = rescored.theory
-            results[idx].detail = rescored.detail
-            results[idx].correctness_score = rescored.correctness_score
-            results[idx].weather_score = rescored.weather_score
-            results[idx].color_score = rescored.color_score
+
+            if results[idx].is_full_outfit and not bottom_b:
+                rescored = self._score_full_outfit(top_b, matrix_a)
+            elif bottom_b:
+                rescored = self._score_pair(top_b, bottom_b, matrix_a)
+            else:
+                continue
+
+            rescored.rank = results[idx].rank
+            results[idx] = rescored

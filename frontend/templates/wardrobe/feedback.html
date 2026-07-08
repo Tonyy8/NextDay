@@ -38,5 +38,23 @@
 
         <button type="submit" class="btn-primary btn-block"><i class="ti ti-send"></i> ส่งข้อเสนอแนะ</button>
     </form>
+
+    {% if recent_feedbacks %}
+    <div class="card feedback-history">
+        <div class="card-label-dark">รายการที่ส่งล่าสุด</div>
+        <ul class="feedback-list">
+            {% for fb in recent_feedbacks %}
+            <li class="feedback-item">
+                <div class="feedback-item-head">
+                    <strong>{{ fb.subject }}</strong>
+                    <span class="feedback-status">{{ fb.status }}</span>
+                </div>
+                <p class="feedback-item-meta">{{ fb.created }} · {% if fb.kind == 'bug' %}แจ้งบั๊ก{% elif fb.kind == 'idea' %}เสนอแนะ{% else %}อื่นๆ{% endif %}</p>
+                {% if fb.detail %}<p class="feedback-item-detail">{{ fb.detail|truncatechars:120 }}</p>{% endif %}
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
 </div>
 {% endblock %}

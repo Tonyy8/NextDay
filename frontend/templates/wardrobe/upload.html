@@ -6,34 +6,29 @@
 <div class="sub-page">
     <div class="sub-hero">
         <h1>อัปโหลดเสื้อผ้า</h1>
-        <p>{% if mock_mode %}เลือกรูปเสื้อผ้าจริง ระบบจะวิเคราะห์สีหลักและเพิ่มเข้าตู้เสื้อผ้าให้อัตโนมัติ{% else %}รองรับอัปโหลดทีละภาพ หรือหลายภาพพร้อมกัน (Batch Upload){% endif %}</p>
+        <p>เลือกรูปได้หลายไฟล์พร้อมกัน สูงสุด {{ max_batch|default:20 }} รูปต่อครั้ง — ระบบจะวิเคราะห์ให้ก่อน แล้วคุณเลือกบันทึกหรือยกเลิกเอง</p>
     </div>
 
+    <ol class="upload-steps">
+        <li><strong>เลือกรูป</strong> — ได้หลายรูป ไม่เกิน {{ max_batch|default:20 }} รูป/รอบ</li>
+        <li><strong>วิเคราะห์</strong> — AI ตรวจประเภทและสีให้อัตโนมัติ</li>
+        <li><strong>ตรวจผล</strong> — เลือกชิ้นที่จะบันทึก หรือกดยกเลิกทั้งหมด</li>
+    </ol>
+
     <div class="card upload-card-lg">
-        {% if mock_mode %}
         <form method="post" enctype="multipart/form-data" id="upload-form">
             {% csrf_token %}
             <label class="upload-drop" id="upload-drop">
                 <input type="file" name="images" accept="image/*" multiple id="upload-input" required hidden>
                 <div class="upload-drop-inner" id="upload-preview">
                     <i class="ti ti-photo-plus"></i>
-                    <span>คลิกเลือกรูปเสื้อผ้า (หลายรูปได้)</span>
-                    <small>ระบบจะวิเคราะห์สีหลักจากรูปจริง</small>
+                    <span>คลิกหรือลากรูปเสื้อผ้ามาวาง</span>
+                    <small>เลือกได้หลายรูป · สูงสุด {{ max_batch|default:20 }} รูปต่อครั้ง</small>
                 </div>
             </label>
-            <button type="submit" class="btn-primary" id="upload-btn"><i class="ti ti-upload"></i> อัปโหลดและวิเคราะห์</button>
+            <p class="upload-limit-note" id="upload-limit-note" hidden></p>
+            <button type="submit" class="btn-primary" id="upload-btn"><i class="ti ti-scan"></i> วิเคราะห์รูปที่เลือก</button>
         </form>
-        {% else %}
-        <form method="post" enctype="multipart/form-data">
-            {% csrf_token %}
-            <div class="form-group">
-                <label>เลือกรูปภาพเสื้อผ้า</label>
-                <input type="file" name="images" accept="image/*" multiple class="form-input" required>
-                <small class="help-text">YOLOv8 ตรวจจับ + Crop | OpenCV สกัดสี + ชื่อสีไทย</small>
-            </div>
-            <button type="submit" class="btn-primary"><i class="ti ti-upload"></i> อัปโหลดและวิเคราะห์</button>
-        </form>
-        {% endif %}
     </div>
 </div>
 
@@ -43,26 +38,51 @@
         <div class="analyze-ring"><span></span><span></span><span></span></div>
         <div class="analyze-bar"><div class="analyze-bar-fill"></div></div>
         <p class="analyze-status" id="analyze-status">กำลังวิเคราะห์...</p>
-        <small>AI กำลังประมวลผลรูปเสื้อผ้าของคุณ</small>
+        <small>รอสักครู่ — จากนั้นจะพาไปหน้าตรวจผลก่อนบันทึก</small>
     </div>
 </div>
 <script>
 (function () {
+    const maxBatch = {{ max_batch|default:20 }};
     const form = document.getElementById("upload-form");
     const input = document.getElementById("upload-input");
     const preview = document.getElementById("upload-preview");
     const btn = document.getElementById("upload-btn");
     const overlay = document.getElementById("analyze-overlay");
     const statusEl = document.getElementById("analyze-status");
-    const steps = ["กำลังอ่านรูปภาพ...", "กำลังตรวจจับเสื้อผ้า...", "กำลังแยกสีหลัก...", "กำลังตั้งชื่อสี...", "กำลังบันทึก..."];
-    input.addEventListener("change", function () {
+    const limitNote = document.getElementById("upload-limit-note");
+    const steps = ["กำลังอ่านรูปภาพ...", "กำลังตรวจจับเสื้อผ้า...", "กำลังแยกสีหลัก...", "กำลังตั้งชื่อสี...", "เตรียมหน้าตรวจผล..."];
+
+    function updatePreview() {
         const n = input.files.length;
-        if (!n) return;
-        preview.innerHTML = '<i class="ti ti-check"></i><span>เลือกแล้ว ' + n + ' รูป</span>';
+        if (!n) {
+            preview.innerHTML = '<i class="ti ti-photo-plus"></i><span>คลิกหรือลากรูปเสื้อผ้ามาวาง</span><small>เลือกได้หลายรูป · สูงสุด ' + maxBatch + ' รูปต่อครั้ง</small>';
+            preview.classList.remove("has-image");
+            limitNote.hidden = true;
+            btn.disabled = false;
+            return;
+        }
+        if (n > maxBatch) {
+            preview.innerHTML = '<i class="ti ti-alert-circle"></i><span>เลือกมากเกินไป (' + n + ' รูป)</span><small>ลดเหลือไม่เกิน ' + maxBatch + ' รูปต่อครั้ง</small>';
+            preview.classList.add("has-image");
+            limitNote.hidden = false;
+            limitNote.textContent = "เลือกได้สูงสุด " + maxBatch + " รูปต่อรอบ — ถ้ามีมากกว่านี้ แบ่งอัปโหลดเป็นหลายครั้ง";
+            btn.disabled = true;
+            return;
+        }
+        preview.innerHTML = '<i class="ti ti-check"></i><span>เลือกแล้ว ' + n + ' รูป</span><small>กดวิเคราะห์ แล้วไปตรวจผลก่อนบันทึก</small>';
         preview.classList.add("has-image");
-    });
-    form.addEventListener("submit", function () {
-        if (!input.files.length) return;
+        limitNote.hidden = true;
+        btn.disabled = false;
+    }
+
+    input.addEventListener("change", updatePreview);
+
+    form.addEventListener("submit", function (e) {
+        if (!input.files.length || input.files.length > maxBatch) {
+            e.preventDefault();
+            return;
+        }
         btn.disabled = true;
         btn.classList.add("is-loading");
         btn.innerHTML = '<i class="ti ti-loader-2 spin"></i> กำลังวิเคราะห์...';

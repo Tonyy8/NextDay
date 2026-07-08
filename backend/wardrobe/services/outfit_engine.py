@@ -1,6 +1,7 @@
 import random
 from dataclasses import dataclass
 
+from database.garment_catalog import get_base_garment_type, is_full_outfit
 from database.models import AISettings, BOTTOM_TYPES, ClothingItem, Destination, TOP_TYPES
 
 from .color_utils import itten_relation, lab_distance, munsell_balance, rgb_to_hue
@@ -17,14 +18,15 @@ class MatchResult:
 @dataclass
 class OutfitSuggestion:
     top: ClothingItem
-    bottom: ClothingItem
-    score: float
-    theory: str
-    detail: str
+    bottom: ClothingItem | None = None
+    score: float = 0.0
+    theory: str = ""
+    detail: str = ""
     rank: int = 0
     correctness_score: float = 0.0
     weather_score: float = 0.0
     color_score: float = 0.0
+    is_full_outfit: bool = False
 
 
 class ColorMatcher:
@@ -77,12 +79,21 @@ class WardrobeFilter:
         allowed = set(destination.allowed_categories)
         return [
             i for i in items
-            if i.garment_type in allowed and i.formality <= destination.formality_level + 1
+            if get_base_garment_type(i.garment_type) in allowed
+            and i.formality <= destination.formality_level + 1
         ]
 
     @staticmethod
     def tops(items):
         return [i for i in items if i.part == "top" or i.garment_type in TOP_TYPES]
+
+    @staticmethod
+    def separates_tops(items):
+        return [i for i in WardrobeFilter.tops(items) if not is_full_outfit(i.garment_type)]
+
+    @staticmethod
+    def full_outfits(items):
+        return [i for i in items if is_full_outfit(i.garment_type)]
 
     @staticmethod
     def bottoms(items):
@@ -115,8 +126,10 @@ class OutfitBuilder:
 
     def part_alternatives(self, item: ClothingItem, user_items, destination: Destination) -> list[ClothingItem]:
         eligible = self.filter.filter_for_destination(user_items, destination)
-        if item.part == "top" or item.garment_type in TOP_TYPES:
-            pool = self.filter.tops(eligible)
+        if is_full_outfit(item.garment_type):
+            pool = self.filter.full_outfits(eligible)
+        elif item.part == "top" or item.garment_type in TOP_TYPES:
+            pool = self.filter.separates_tops(eligible)
         else:
             pool = self.filter.bottoms(eligible)
         return [i for i in pool if i.pk != item.pk]

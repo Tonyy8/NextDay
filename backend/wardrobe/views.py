@@ -5,12 +5,15 @@ from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_http_methods, require_POST
 
-from database.models import ClothingItem, Destination, FavoriteOutfit, GARMENT_TYPES, FABRIC_THICKNESS_CHOICES
+from database.models import ClothingItem, Destination, FavoriteOutfit, GARMENT_CATEGORY_GROUPS, FABRIC_THICKNESS_CHOICES
+from database.garment_catalog import get_base_garment_type
 from wardrobe.forms import ItemEditForm, ProfileForm, SaveOutfitForm, WardrobeSearchForm, WARDROBE_COLORS, FORMALITY_CHOICES, snap_to_palette
 from wardrobe.services import ClothingProcessor, OutfitBuilder
 from wardrobe.services.color_utils import rgb_to_lab, thai_color_name
 from wardrobe.services.destination_profiles import STYLE_LABELS, WEATHER_LABELS, build_matrix_a
+from wardrobe.services.weather import fetch_weather
 from wardrobe import mock_data as mock
+from wardrobe.user_preferences import get_font_size, get_ui_lang, set_font_size, set_ui_lang
 
 
 def _outfit_matrix_context(destination):
@@ -36,7 +39,7 @@ def dashboard(request):
     dest_stats = []
     for dest in destinations:
         allowed = set(dest.allowed_categories)
-        count = sum(1 for i in item_list if i.garment_type in allowed)
+        count = sum(1 for i in item_list if get_base_garment_type(i.garment_type) in allowed)
         dest_stats.append({"dest": dest, "count": count})
 
     color_map = {}
@@ -68,31 +71,48 @@ def dashboard(request):
         "unused_count": sum(1 for i in item_list if not i.is_verified),
         "username": username,
         "avatar_letter": avatar_letter,
+        "weather": fetch_weather(),
     })
 
 
 @login_required
 @require_http_methods(["GET", "POST"])
 def upload(request):
+    max_batch = mock.MAX_UPLOAD_BATCH if settings.MOCK_MODE else 20
     if settings.MOCK_MODE:
         if request.method == "POST":
             files = request.FILES.getlist("images")
             if not files:
                 messages.error(request, "กรุณาเลือกรูปภาพ")
                 return redirect("wardrobe:upload")
-            created = mock.add_uploaded_items(request, files)
+            if len(files) > max_batch:
+                messages.error(
+                    request,
+                    f"อัปโหลดได้ไม่เกิน {max_batch} รูปต่อครั้ง — ลองแบ่งอัปโหลดเป็นหลายรอบ",
+                )
+                return redirect("wardrobe:upload")
+            created = mock.analyze_upload_batch(request, files)
             if not created:
                 messages.error(request, "ไม่สามารถอ่านไฟล์รูปได้ ลองใหม่อีกครั้ง")
                 return redirect("wardrobe:upload")
-            request.session["mock_last_upload"] = [rec["pk"] for rec in created]
-            request.session.modified = True
+            review_count = sum(1 for i in created if i.get("needs_review"))
+            msg = f"วิเคราะห์แล้ว {len(created)} ชิ้น — ตรวจสอบแล้วเลือกบันทึกหรือยกเลิก"
+            if review_count:
+                msg += f" ({review_count} ชิ้นแนะนำให้ตรวจสอบ)"
+            messages.info(request, msg)
             return redirect("wardrobe:upload_result")
-        return render(request, "wardrobe/upload.html")
+        return render(request, "wardrobe/upload.html", {"max_batch": max_batch})
 
     if request.method == "POST":
         files = request.FILES.getlist("images")
         if not files:
             messages.error(request, "กรุณาเลือกรูปภาพ")
+            return redirect("wardrobe:upload")
+        if len(files) > max_batch:
+            messages.error(
+                request,
+                f"อัปโหลดได้ไม่เกิน {max_batch} รูปต่อครั้ง — ลองแบ่งอัปโหลดเป็นหลายรอบ",
+            )
             return redirect("wardrobe:upload")
 
         processor = ClothingProcessor()
@@ -108,18 +128,37 @@ def upload(request):
         messages.success(request, f"อัปโหลดสำเร็จ {len(created)} ชิ้น" + (f" ({review_count} ชิ้นต้องตรวจสอบ)" if review_count else ""))
         return redirect("wardrobe:wardrobe")
 
-    return render(request, "wardrobe/upload.html")
+    return render(request, "wardrobe/upload.html", {"max_batch": max_batch})
 
 
 @login_required
+@require_http_methods(["GET", "POST"])
 def upload_result(request):
     if not settings.MOCK_MODE:
         return redirect("wardrobe:wardrobe")
-    pks = request.session.get("mock_last_upload", [])
-    items = mock.get_items_by_pks(request, pks)
+
+    if request.method == "POST":
+        action = request.POST.get("action")
+        if action == "discard":
+            mock.discard_pending_uploads(request)
+            messages.info(request, "ยกเลิกแล้ว — ไม่ได้บันทึกเข้าตู้เสื้อผ้า")
+            return redirect("wardrobe:upload")
+        if action == "confirm":
+            selected = request.POST.getlist("selected")
+            count = mock.confirm_pending_uploads(request, [int(p) for p in selected])
+            if count:
+                messages.success(request, f"บันทึก {count} ชิ้นเข้าตู้เสื้อผ้าแล้ว")
+                return redirect("wardrobe:wardrobe")
+            messages.warning(request, "ไม่ได้เลือกชิ้นใด — ไม่มีการบันทึก")
+            return redirect("wardrobe:upload_result")
+
+    items = mock.get_pending_uploads(request)
     if not items:
         return redirect("wardrobe:upload")
-    return render(request, "wardrobe/upload_result.html", {"items": items})
+    return render(request, "wardrobe/upload_result.html", {
+        "items": items,
+        "max_batch": mock.MAX_UPLOAD_BATCH,
+    })
 
 
 @login_required
@@ -144,7 +183,7 @@ def wardrobe_list(request):
         "items": items,
         "total_items": ClothingItem.objects.filter(user=request.user).count(),
         "form": form,
-        "garment_types": GARMENT_TYPES,
+        "garment_category_groups": GARMENT_CATEGORY_GROUPS,
         "color_choices": WARDROBE_COLORS,
         "formality_choices": FORMALITY_CHOICES,
         "thickness_choices": FABRIC_THICKNESS_CHOICES,
@@ -219,7 +258,8 @@ def _apply_item_edit(item, data):
 @require_POST
 def wardrobe_delete(request, pk):
     if settings.MOCK_MODE:
-        messages.info(request, "ลบเสื้อผ้าแล้ว (Mockup)")
+        mock.delete_item(request, pk)
+        messages.info(request, "ลบเสื้อผ้าออกจากตู้แล้ว")
         return redirect("wardrobe:wardrobe")
 
     item = get_object_or_404(ClothingItem, pk=pk, user=request.user)
@@ -315,7 +355,12 @@ def outfit_builder(request):
             slot_idx = int(swap_slot)
             if slot_idx < len(outfits):
                 current = outfits[slot_idx]
-                ref_item = current.top if swap_piece == "top" else current.bottom
+                if getattr(current, "is_full_outfit", False):
+                    ref_item = current.top
+                elif swap_piece == "top":
+                    ref_item = current.top
+                else:
+                    ref_item = current.bottom
                 alts = builder.part_alternatives(ref_item, user_items, destination)
                 context["swap_alternatives"] = [
                     {
@@ -325,6 +370,7 @@ def outfit_builder(request):
                     for alt in alts[:6]
                 ]
                 context["swap_current"] = ref_item
+                context["swap_is_full_outfit"] = getattr(current, "is_full_outfit", False)
 
     return render(request, "wardrobe/outfit.html", context)
 
@@ -362,16 +408,20 @@ def _outfit_base_query(destination, outfits, overrides):
     params = [f"destination={destination.pk}"]
     for i, outfit in enumerate(outfits):
         top_pk = overrides.get(i, {}).get("top", outfit.top.pk)
-        bottom_pk = overrides.get(i, {}).get("bottom", outfit.bottom.pk)
         params.append(f"t{i}={top_pk}")
-        params.append(f"b{i}={bottom_pk}")
+        if not getattr(outfit, "is_full_outfit", False):
+            bottom_pk = overrides.get(i, {}).get("bottom", outfit.bottom.pk)
+            params.append(f"b{i}={bottom_pk}")
     return "&".join(params)
 
 
 def _enrich_outfit_urls(destination, outfits, overrides):
     for i, outfit in enumerate(outfits):
         outfit.swap_top_url = f"?{_outfit_base_query(destination, outfits, overrides)}&swap={i}&piece=top"
-        outfit.swap_bottom_url = f"?{_outfit_base_query(destination, outfits, overrides)}&swap={i}&piece=bottom"
+        if getattr(outfit, "is_full_outfit", False):
+            outfit.swap_bottom_url = ""
+        else:
+            outfit.swap_bottom_url = f"?{_outfit_base_query(destination, outfits, overrides)}&swap={i}&piece=bottom"
     return f"?{_outfit_base_query(destination, outfits, overrides)}"
 
 
@@ -379,7 +429,17 @@ def _enrich_outfit_urls(destination, outfits, overrides):
 @require_POST
 def save_outfit(request):
     if settings.MOCK_MODE:
-        messages.success(request, "บันทึกชุดโปรดเรียบร้อย (Mockup)")
+        fav = mock.save_favorite(
+            request,
+            request.POST.get("top_id"),
+            request.POST.get("bottom_id"),
+            request.POST.get("destination_id"),
+            request.POST.get("name", ""),
+        )
+        if fav:
+            messages.success(request, f"บันทึกชุดโปรด #{fav.pk} เรียบร้อย")
+        else:
+            messages.error(request, "ไม่สามารถบันทึกชุดได้")
         return redirect("wardrobe:favorites")
 
     top_id = request.POST.get("top_id")
@@ -410,7 +470,7 @@ def save_outfit(request):
 @login_required
 def favorites(request):
     if settings.MOCK_MODE:
-        return render(request, "wardrobe/favorites.html", mock.favorites_context())
+        return render(request, "wardrobe/favorites.html", mock.favorites_context(request))
 
     outfits = FavoriteOutfit.objects.filter(user=request.user).select_related(
         "destination", "top_item", "bottom_item"
@@ -422,7 +482,8 @@ def favorites(request):
 @require_POST
 def delete_favorite(request, pk):
     if settings.MOCK_MODE:
-        messages.info(request, "ลบชุดโปรดแล้ว (Mockup)")
+        mock.delete_favorite(request, pk)
+        messages.info(request, "ลบชุดโปรดแล้ว")
         return redirect("wardrobe:favorites")
 
     fav = get_object_or_404(FavoriteOutfit, pk=pk, user=request.user)
@@ -431,9 +492,25 @@ def delete_favorite(request, pk):
     return redirect("wardrobe:favorites")
 
 
+@login_required
+@require_http_methods(["GET", "POST"])
 def community(request):
     if settings.MOCK_MODE:
-        return render(request, "wardrobe/community.html", mock.community_context())
+        if request.method == "POST":
+            action = request.POST.get("action")
+            if action == "delete":
+                mock.delete_community_post(request, request.POST.get("post_id"))
+                messages.success(request, "ลบโพสต์แล้ว")
+            else:
+                image = request.FILES.get("image")
+                caption = request.POST.get("caption", "").strip()
+                if not image:
+                    messages.error(request, "กรุณาเลือกรูปภาพ")
+                else:
+                    mock.add_community_post(request, image, caption)
+                    messages.success(request, "แชร์ลุคเรียบร้อย")
+            return redirect("wardrobe:community")
+        return render(request, "wardrobe/community.html", mock.community_context(request))
 
     username = request.user.username.split("@")[0]
     return render(request, "wardrobe/community.html", {
@@ -514,8 +591,43 @@ def profile(request):
 
 @login_required
 @require_http_methods(["GET", "POST"])
+def settings_view(request):
+    if request.method == "POST":
+        font_size = request.POST.get("font_size")
+        ui_lang = request.POST.get("ui_lang")
+        if font_size:
+            set_font_size(request, font_size)
+        if ui_lang:
+            set_ui_lang(request, ui_lang)
+        if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+            from django.http import JsonResponse
+            return JsonResponse({
+                "ok": True,
+                "font_size": get_font_size(request),
+                "ui_lang": get_ui_lang(request),
+            })
+        return redirect("wardrobe:settings")
+
+    return render(request, "wardrobe/settings.html", {
+        "font_size": get_font_size(request),
+        "ui_lang": get_ui_lang(request),
+    })
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
 def feedback(request):
     if request.method == "POST":
+        if settings.MOCK_MODE:
+            mock.save_feedback(
+                request,
+                request.POST.get("kind", "other"),
+                request.POST.get("subject", "").strip(),
+                request.POST.get("detail", "").strip(),
+            )
         messages.success(request, "ส่งข้อเสนอแนะเรียบร้อย ขอบคุณที่ช่วยพัฒนา NEXTDAY")
         return redirect("wardrobe:feedback")
-    return render(request, "wardrobe/feedback.html", {})
+    ctx = {}
+    if settings.MOCK_MODE:
+        ctx = mock.feedback_context(request)
+    return render(request, "wardrobe/feedback.html", ctx)

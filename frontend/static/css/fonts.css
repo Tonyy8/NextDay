@@ -1,0 +1,54 @@
+@font-face {
+    font-family: "Sarabun";
+    src: url("/static/fonts/Sarabun/Sarabun-Regular.ttf") format("truetype");
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "Sarabun";
+    src: url("/static/fonts/Sarabun/Sarabun-Italic.ttf") format("truetype");
+    font-weight: 400;
+    font-style: italic;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "Sarabun";
+    src: url("/static/fonts/Sarabun/Sarabun-Medium.ttf") format("truetype");
+    font-weight: 500;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "Sarabun";
+    src: url("/static/fonts/Sarabun/Sarabun-SemiBold.ttf") format("truetype");
+    font-weight: 600;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "Sarabun";
+    src: url("/static/fonts/Sarabun/Sarabun-Bold.ttf") format("truetype");
+    font-weight: 700;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "Sarabun";
+    src: url("/static/fonts/Sarabun/Sarabun-ExtraBold.ttf") format("truetype");
+    font-weight: 800;
+    font-style: normal;
+    font-display: swap;
+}
+
+:root {
+    --font-app: "Sarabun", "Noto Sans Thai", sans-serif;
+    --font-sans: var(--font-app);
+    --font-serif: var(--font-app);
+    --font-display: var(--font-app);
+}

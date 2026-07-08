@@ -9,13 +9,33 @@ from __future__ import annotations
 
 import base64
 from datetime import timedelta
+from pathlib import Path
 
 from django.utils import timezone
 
-from database.models import FABRIC_THICKNESS_CHOICES, GARMENT_TYPES
-from wardrobe.forms import FORMALITY_CHOICES, WARDROBE_COLORS, WardrobeSearchForm, snap_to_palette
+from database.garment_catalog import (
+    BOTTOM_TYPES,
+    DEFAULT_FORMALITY,
+    GARMENT_CATEGORY_GROUPS,
+    GARMENT_LABELS,
+    GARMENT_TYPES,
+    TOP_TYPES,
+    get_base_garment_type,
+    infer_part,
+    is_full_outfit,
+    normalize_garment_type,
+)
+from database.models import FABRIC_THICKNESS_CHOICES
+from wardrobe.forms import (
+    FORMALITY_CHOICES,
+    WARDROBE_COLORS,
+    WardrobeSearchForm,
+    color_label_for_hex,
+    snap_to_palette,
+)
 from wardrobe.services.color_utils import rgb_to_lab, thai_color_name
 from wardrobe.services.destination_profiles import (
+    DEFAULT_FABRIC_THICKNESS,
     DESTINATION_PROFILES,
     STYLE_LABELS,
     THICKNESS_LABELS,
@@ -24,34 +44,145 @@ from wardrobe.services.destination_profiles import (
 )
 from wardrobe.services.outfit_engine import OutfitBuilder
 from wardrobe.services.outfit_scorer import OutfitScoringEngine
+from wardrobe.services.weather import fetch_weather
 
 DEMO_USERNAME = "demo"
 DEMO_EMAIL = "demo@nextday.app"
 
-GARMENT_LABELS = dict(GARMENT_TYPES)
 SESSION_EDIT_KEY = "mock_item_edits"
 SESSION_UPLOAD_KEY = "mock_uploaded_items"
+SESSION_PENDING_UPLOAD_KEY = "mock_pending_upload"
+SESSION_DELETED_KEY = "mock_deleted_pks"
+SESSION_FAVORITES_KEY = "mock_favorites"
+SESSION_HIDDEN_FAVORITES_KEY = "mock_hidden_favorite_pks"
+SESSION_COMMUNITY_KEY = "mock_community_posts"
+SESSION_FEEDBACK_KEY = "mock_feedbacks"
 UPLOAD_PK_BASE = 1000
+MAX_UPLOAD_BATCH = 20
+FAVORITE_PK_BASE = 2000
+COMMUNITY_PK_BASE = 5000
 
-# Real fashion photos for the mockup (Unsplash)
-IMG = {
-    "top_white": "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=400&h=500&fit=crop",    
-    "top_blue": "https://images.unsplash.com/photo-1583743814966-8936f5b7be1a?w=400&h=500&fit=crop",
-    "top_blouse": "https://images.unsplash.com/photo-1594633312681-425c7b97ccd1?w=400&h=500&fit=crop",
-    "top_blouse_pink": "https://images.unsplash.com/photo-1581044777550-4cfa60707c03?w=400&h=500&fit=crop",
-    "top_jacket": "https://images.unsplash.com/photo-1551028719-00167b16eac5?w=400&h=500&fit=crop",
-    "top_stripe": "https://images.unsplash.com/photo-1576566588028-4147f3842f27?w=400&h=500&fit=crop",
-    "top_tshirt_cream": "https://images.unsplash.com/photo-1503341504253-dff4815485f1?w=400&h=500&fit=crop",
-    "top_polo": "https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=400&h=500&fit=crop",
-    "top_shirt_light_blue": "https://images.unsplash.com/photo-1596755094514-f87e34085b2c?w=400&h=500&fit=crop",
-    "pants_navy": "https://images.unsplash.com/photo-1473966968600-fa801b869a1a?w=400&h=500&fit=crop",
-    "pants_blue": "https://images.unsplash.com/photo-1541099649105-f69ad21f3246?w=400&h=500&fit=crop",
-    "pants_beige": "https://images.unsplash.com/photo-1594938298603-c8148c4dae35?w=400&h=500&fit=crop",
-    "shorts": "https://images.unsplash.com/photo-1591195853828-11db59a44f6b?w=400&h=500&fit=crop",
-    "skirt": "https://images.unsplash.com/photo-1583496661160-fb5886a0aaaa?w=400&h=500&fit=crop",
-    "pants_black": "https://images.unsplash.com/photo-1542272604-787c3835535d?w=400&h=500&fit=crop",
-    "pants_cream": "https://images.unsplash.com/photo-1506629082955-511b1aa562c8?w=400&h=500&fit=crop",
-}
+FORMALITY_MAP = DEFAULT_FORMALITY
+AI_CONFIDENCE_THRESHOLD = 0.6
+
+# ── Garment metadata rules (part ↔ type ↔ color ต้องสอดคล้องกัน) ─────────────
+
+_PALETTE_NAMES = dict(WARDROBE_COLORS)
+
+
+def infer_part_from_garment(garment_type: str) -> str:
+    """ท่อนบน/ล่าง อิงจากประเภทเสื้อผ้าเสมอ — ไม่ให้ part กับ type ขัดกัน."""
+    return infer_part(garment_type)
+
+
+def normalize_item_metadata(
+    *,
+    garment_type: str,
+    part: str | None = None,
+    formality: int | None = None,
+    fabric_thickness: str | None = None,
+    primary_color_hex: str,
+    color_name_th: str | None = None,
+) -> dict:
+    """จัด part, ความเป็นทางการ, ความหนา, สี ให้ถูกต้องและ snap สีเข้า palette."""
+    garment_type = normalize_garment_type(garment_type or "t_shirt")
+    part = infer_part_from_garment(garment_type)
+
+    if formality is None:
+        formality = FORMALITY_MAP.get(garment_type, 3)
+    if not fabric_thickness:
+        fabric_thickness = DEFAULT_FABRIC_THICKNESS.get(garment_type, "medium")
+
+    hex_code = snap_to_palette(primary_color_hex)
+    palette_name = color_label_for_hex(hex_code)
+    if color_name_th and color_name_th == _PALETTE_NAMES.get(hex_code):
+        final_name = color_name_th
+    else:
+        final_name = palette_name
+
+    return {
+        "part": part,
+        "garment_type": garment_type,
+        "formality": int(formality),
+        "fabric_thickness": fabric_thickness,
+        "primary_color_hex": hex_code,
+        "color_name_th": final_name,
+    }
+
+
+def _make_mock_item(
+    pk,
+    img_key,
+    garment_type,
+    color_hex,
+    *,
+    formality=None,
+    fabric_thickness=None,
+    color_name_th=None,
+    garment_type_display=None,
+    needs_review=False,
+    is_verified=True,
+    created_offset_hours=0,
+):
+    meta = normalize_item_metadata(
+        garment_type=garment_type,
+        formality=formality,
+        fabric_thickness=fabric_thickness,
+        primary_color_hex=color_hex,
+        color_name_th=color_name_th,
+    )
+    image_url = _resolve_mock_image(img_key, color_hex)
+    return MockClothingItem(
+        pk,
+        meta["part"],
+        meta["garment_type"],
+        meta["formality"],
+        meta["fabric_thickness"],
+        meta["primary_color_hex"],
+        image_url=image_url,
+        color_name_th=meta["color_name_th"],
+        garment_type_display=garment_type_display,
+        needs_review=needs_review,
+        is_verified=is_verified,
+        created_offset_hours=created_offset_hours,
+    )
+
+# Local mock photos (bundled under frontend/static — works offline, no broken CDN links)
+_MOCK_IMG = "/static/mock/wardrobe"
+_STATIC_MOCK_DIR = Path(__file__).resolve().parents[2] / "frontend" / "static" / "mock" / "wardrobe"
+_MIN_IMAGE_BYTES = 256
+
+
+def _image_file_for_key(img_key: str) -> Path | None:
+    """หาไฟล์รูปจริงบนดิสก์ (รองรับชื่อไฟล์ไม่ตรง manifest)."""
+    path = _STATIC_MOCK_DIR / f"{img_key}.jpg"
+    if path.is_file() and path.stat().st_size >= _MIN_IMAGE_BYTES:
+        return path
+    prefix = img_key.split("_", 1)[0]
+    if prefix.isdigit():
+        for candidate in sorted(_STATIC_MOCK_DIR.glob(f"{prefix}_*.jpg")):
+            if candidate.stat().st_size >= _MIN_IMAGE_BYTES:
+                return candidate
+    return None
+
+
+def _mock_img(name: str) -> str:
+    from django.templatetags.static import static
+
+    return static(f"mock/wardrobe/{name}.jpg")
+
+
+def _resolve_mock_image(img_key: str, color_hex: str) -> str:
+    """ใช้รูป static ถ้ามี ไม่งั้น fallback เป็น swatch สี (ไม่ broken img)."""
+    if img_key in IMG:
+        return IMG[img_key]
+    path = _image_file_for_key(img_key)
+    if path:
+        return _mock_img(path.stem)
+    return _placeholder(color_hex)
+
+
+IMG = {}
 
 
 def _placeholder(hex_code: str) -> str:
@@ -101,14 +232,22 @@ class MockClothingItem:
         is_verified=True,
         created_offset_hours=0,
     ):
+        norm = normalize_item_metadata(
+            garment_type=garment_type,
+            part=part,
+            formality=formality,
+            fabric_thickness=fabric_thickness,
+            primary_color_hex=primary_color_hex,
+            color_name_th=color_name_th,
+        )
         self.pk = pk
         self.id = pk
-        self.part = part
-        self.garment_type = garment_type
-        self.formality = formality
-        self.fabric_thickness = fabric_thickness
-        self.primary_color_hex = primary_color_hex
-        self.color_name_th = color_name_th or thai_color_name(primary_color_hex)
+        self.part = norm["part"]
+        self.garment_type = norm["garment_type"]
+        self.formality = norm["formality"]
+        self.fabric_thickness = norm["fabric_thickness"]
+        self.primary_color_hex = norm["primary_color_hex"]
+        self.color_name_th = norm["color_name_th"]
         self.garment_type_display = garment_type_display
         self.needs_review = needs_review
         self.is_verified = is_verified
@@ -150,7 +289,17 @@ class MockDestination:
 
 
 class MockFavorite:
-    def __init__(self, pk, destination, top_item, bottom_item, name, match_score, match_theory):
+    def __init__(
+        self,
+        pk,
+        destination,
+        top_item,
+        bottom_item=None,
+        name="",
+        match_score=0,
+        match_theory="",
+        full_outfit=False,
+    ):
         self.pk = pk
         self.id = pk
         self.destination = destination
@@ -159,6 +308,9 @@ class MockFavorite:
         self.name = name
         self.match_score = match_score
         self.match_theory = match_theory
+        self.is_full_outfit = full_outfit or (
+            bottom_item is None and is_full_outfit(top_item.garment_type)
+        )
 
 
 # ── Mock wardrobe ─────────────────────────────────────────────────────────────
@@ -167,47 +319,291 @@ DESTINATIONS = [
     MockDestination(1, "อยู่บ้าน", "home", 1, ["t_shirt", "shorts"], "🏠", "ชิลๆ สบายตัวที่บ้าน"),
     MockDestination(2, "เดินห้าง", "mall", 2, ["t_shirt", "shirt", "pants", "shorts"], "🛍️", "เดินเล่น ช้อปปิ้ง คาเฟ่"),
     MockDestination(3, "ออฟฟิศ", "office", 4, ["shirt", "blouse", "pants", "skirt"], "💼", "ทำงาน ประชุม สุภาพเรียบร้อย"),
-    MockDestination(4, "ปาร์ตี้", "party", 5, ["shirt", "blouse", "jacket", "pants", "skirt"], "🎉", "งานเลี้ยง สังสรรค์ยามค่ำ"),
-    MockDestination(5, "งานแต่ง", "wedding", 6, ["shirt", "blouse", "jacket", "pants", "skirt"], "💍", "งานพิธี ทางการสุด"),
+    MockDestination(4, "ปาร์ตี้", "party", 5, ["shirt", "blouse", "dress", "jumpsuit", "jacket", "pants", "skirt"], "🎉", "งานเลี้ยง สังสรรค์ยามค่ำ"),
+    MockDestination(5, "งานแต่ง", "wedding", 6, ["shirt", "blouse", "dress", "jumpsuit", "suit", "jacket", "pants", "skirt"], "💍", "งานพิธี — เดรส จั๊มสูท สูท (เลี่ยงชุดดำ/ขาวล้วน)"),
     MockDestination(6, "ออกกำลัง", "sport", 1, ["t_shirt", "shorts"], "🏃", "ฟิตเนส วิ่ง กิจกรรมกลางแจ้ง"),
 ]
 
-ITEMS = [
-    # Tops
-    MockClothingItem(1, "top", "t_shirt", 4, "thin", "#f5f5f5", image_url=IMG["top_white"], color_name_th="ขาว", created_offset_hours=24),
-    MockClothingItem(2, "top", "t_shirt", 2, "thin", "#2c5ead", image_url=IMG["top_blue"], color_name_th="ดำ", created_offset_hours=48),
-    MockClothingItem(3, "top", "t_shirt", 4, "thin", "#fbcfe8", image_url=IMG["top_blouse_pink"], color_name_th="สีชมพูอ่อน", needs_review=True, is_verified=False, created_offset_hours=72),
-    MockClothingItem(4, "top", "t_shirt", 2, "thin", "#f5f5f5", image_url=IMG["top_stripe"], color_name_th="ขาวลายน้ำเงิน", created_offset_hours=168),
-    MockClothingItem(6, "top", "shirt", 3, "thin", "#93c5fd", image_url=IMG["top_shirt_light_blue"], color_name_th="ฟ้าอ่อน", created_offset_hours=240),
-    # Bottoms
-    MockClothingItem(7, "bottom", "pants", 4, "medium", "#d2b48c", image_url=IMG["pants_navy"], color_name_th="สีน้ำตาลอ่อน", created_offset_hours=24),
-    MockClothingItem(8, "bottom", "pants", 3, "medium", "#2c5ead", image_url=IMG["pants_blue"], color_name_th="สีน้ำเงิน", created_offset_hours=96),
-    MockClothingItem(9, "bottom", "shorts", 1, "thin", "#38bdf8", image_url=IMG["shorts"], color_name_th="สีฟ้า", created_offset_hours=144),
-    MockClothingItem(10, "bottom", "skirt", 4, "thin", "#111827", image_url=IMG["skirt"], color_name_th="ดำ", created_offset_hours=192),
-    MockClothingItem(11, "bottom", "pants", 5, "thick", "#111827", image_url=IMG["pants_black"], color_name_th="ดำ", garment_type_display="กางเกงยีน", created_offset_hours=288),
-    MockClothingItem(12, "bottom", "pants", 3, "medium", "#86efac", image_url=IMG["pants_cream"], color_name_th="สีเขียวอ่อน", created_offset_hours=336),
-]
+# ครบ 7 ประเภทตาม dropdown (database.models.GARMENT_TYPES) — ชิ้นละ 1 ประเภท
+# ใส่รูปจริงที่ frontend/static/mock/wardrobe/<img_key>.jpg
+_MOCK_CATALOG = []
+
+
+def _load_items_from_manifest():
+    """โหลดเสื้อผ้าจาก manifest.json (สร้างจาก mock_samples/wardrobe/source)."""
+    import json
+
+    manifest_path = _STATIC_MOCK_DIR / "manifest.json"
+    if not manifest_path.is_file():
+        try:
+            from wardrobe.sample_import import DEFAULT_SOURCE, build_manifest
+
+            if DEFAULT_SOURCE.is_dir() and any(DEFAULT_SOURCE.iterdir()):
+                build_manifest(DEFAULT_SOURCE)
+        except Exception:
+            return []
+
+    if not manifest_path.is_file():
+        return []
+
+    items = []
+    for rec in json.loads(manifest_path.read_text(encoding="utf-8")):
+        img_file = _image_file_for_key(rec["img_key"])
+        if not img_file:
+            continue
+        rec = {**rec, "img_key": img_file.stem}
+        meta = normalize_item_metadata(
+            garment_type=rec["garment_type"],
+            formality=rec.get("formality"),
+            fabric_thickness=rec.get("fabric_thickness"),
+            primary_color_hex=rec["color_hex"],
+            color_name_th=rec.get("color_name_th"),
+        )
+        items.append(
+            MockClothingItem(
+                rec["pk"],
+                meta["part"],
+                meta["garment_type"],
+                meta["formality"],
+                meta["fabric_thickness"],
+                meta["primary_color_hex"],
+                image_url=_resolve_mock_image(rec["img_key"], meta["primary_color_hex"]),
+                color_name_th=meta["color_name_th"],
+                created_offset_hours=rec["pk"] * 24,
+            )
+        )
+    return items
+
+
+_MANIFEST_MTIME: float | None = None
+_ITEMS_CACHE: list = []
+
+
+def _get_static_items() -> list:
+    """โหลด manifest ใหม่เมื่อไฟล์เปลี่ยน (ไม่ต้อง restart server)."""
+    global _MANIFEST_MTIME, _ITEMS_CACHE
+    manifest_path = _STATIC_MOCK_DIR / "manifest.json"
+    if not manifest_path.is_file():
+        _ITEMS_CACHE = []
+        _MANIFEST_MTIME = None
+        return _ITEMS_CACHE
+    mtime = manifest_path.stat().st_mtime
+    if _MANIFEST_MTIME != mtime or not _ITEMS_CACHE:
+        _ITEMS_CACHE = _load_items_from_manifest()
+        _MANIFEST_MTIME = mtime
+    return _ITEMS_CACHE
+
+
+ITEMS = _get_static_items()
+
 
 def _find(pk):
-    for item in ITEMS:
+    for item in _get_static_items():
         if item.pk == pk:
             return item
     return None
 
 
-FAVORITES = [
-    MockFavorite(1, DESTINATIONS[2], _find(1), _find(7), "ชุดออฟฟิศ", 87, "Analogous · เข้ากันดี"),
-    MockFavorite(2, DESTINATIONS[1], _find(2), _find(9), "ชุดห้างสุดสบาย", 79, "Complementary · คอนทราสต์พอดี"),
-    MockFavorite(3, DESTINATIONS[3], _find(4), _find(11), "ชุดงานเลี้ยง", 91, "Monochromatic · โทนเดียวหรู"),
-]
+_FAVORITE_NAMES = {
+    "home": "ชุดชิลๆ อยู่บ้าน",
+    "mall": "ชุดห้างสุดสบาย",
+    "office": "ชุดออฟฟิศ",
+    "party": "ชุดงานเลี้ยง",
+    "wedding": "ชุดงานแต่ง",
+    "sport": "ชุดออกกำลังกาย",
+}
+
+
+def _humanize_pair_theory(top, bottom, score: float) -> str:
+    if score >= 70:
+        quality = "เข้ากันดี"
+    elif score >= 50:
+        quality = "เข้ากันพอใช้"
+    else:
+        quality = "เข้ากันน้อย"
+    return (
+        f"จับคู่สี · {top.get_garment_type_display()} + {bottom.get_garment_type_display()} · "
+        f"{quality} ({round(score)}%)"
+    )
+
+
+def _humanize_full_outfit_theory(top, destination=None) -> str:
+    label = top.get_garment_type_display()
+    color = top.color_name_th
+    if destination:
+        from wardrobe.services.outfit_scorer import build_matrix_a, build_matrix_b, score_correctness, score_weather
+
+        matrix_a = build_matrix_a(destination)
+        piece_b = build_matrix_b(top)
+        corr = score_correctness(piece_b, matrix_a)
+        weather = score_weather(piece_b, matrix_a.weather)
+        return (
+            f"ชุดเซ็ต · {label} สี{color} · "
+            f"เหมาะสถานที่ {corr:.0f}% · อากาศ {weather:.0f}%"
+        )
+    return f"ชุดเซ็ต · {label} สี{color} · ไม่ต้องจับคู่ท่อนบน/ล่าง"
+
+
+def _build_default_favorites():
+    """ชุดโปรด — จับคู่ top/bottom หรือชุดเซ็ต (เดรส/จั๊มสูท/สูท) ที่ดีที่สุดต่อสถานที่."""
+    from wardrobe.services.outfit_engine import ColorMatcher
+    from wardrobe.services.outfit_scorer import (
+        FULL_OUTFIT_COLOR_SCORE,
+        WEIGHT_COLOR,
+        WEIGHT_CORRECTNESS,
+        WEIGHT_WEATHER,
+        build_matrix_a,
+        build_matrix_b,
+        passes_hard_filter,
+        score_correctness,
+        score_weather,
+    )
+
+    items = _get_static_items()
+    tops = [i for i in items if i.part == "top" and not is_full_outfit(i.garment_type)]
+    bottoms = [i for i in items if i.part == "bottom"]
+    full_items = [i for i in items if is_full_outfit(i.garment_type)]
+    if not tops and not full_items:
+        return []
+
+    matcher = ColorMatcher()
+    favorites = []
+    used_items: set[int] = set()
+    for fav_pk, dest in enumerate(DESTINATIONS, start=1):
+        matrix_a = build_matrix_a(dest)
+        ranked: list[tuple[float, str, object, object | None, bool]] = []
+
+        for top in tops:
+            top_b = build_matrix_b(top)
+            if not passes_hard_filter(top_b, matrix_a):
+                continue
+            for bottom in bottoms:
+                bottom_b = build_matrix_b(bottom)
+                if not passes_hard_filter(bottom_b, matrix_a):
+                    continue
+                match = matcher.score_pair(top, bottom)
+                ranked.append((
+                    match.score,
+                    _humanize_pair_theory(top, bottom, match.score),
+                    top,
+                    bottom,
+                    False,
+                ))
+
+        for piece in full_items:
+            piece_b = build_matrix_b(piece)
+            if not passes_hard_filter(piece_b, matrix_a):
+                continue
+            corr = score_correctness(piece_b, matrix_a)
+            weather = score_weather(piece_b, matrix_a.weather)
+            score = (
+                WEIGHT_CORRECTNESS * corr
+                + WEIGHT_WEATHER * weather
+                + WEIGHT_COLOR * FULL_OUTFIT_COLOR_SCORE
+            )
+            theory = _humanize_full_outfit_theory(piece, dest)
+            ranked.append((score, theory, piece, None, True))
+
+        ranked.sort(key=lambda row: row[0], reverse=True)
+        chosen = None
+        for score, theory, top, bottom, as_full in ranked:
+            if top.pk in used_items:
+                continue
+            if not as_full and bottom and (top.pk, bottom.pk) in {
+                (f.top_item.pk, f.bottom_item.pk)
+                for f in favorites
+                if not f.is_full_outfit and f.bottom_item
+            }:
+                continue
+            chosen = (score, theory, top, bottom, as_full)
+            break
+        if not chosen:
+            continue
+        score, theory, top, bottom, as_full = chosen
+        used_items.add(top.pk)
+        favorites.append(
+            MockFavorite(
+                fav_pk,
+                dest,
+                top,
+                bottom,
+                _FAVORITE_NAMES.get(dest.slug, f"ชุด{dest.name}"),
+                round(score),
+                theory,
+                full_outfit=as_full,
+            )
+        )
+    return favorites
+
+
+_FAVORITES_MTIME: float | None = None
+_FAVORITES_CACHE: list = []
+
+
+def _get_default_favorites() -> list:
+    global _FAVORITES_MTIME, _FAVORITES_CACHE
+    manifest_path = _STATIC_MOCK_DIR / "manifest.json"
+    mtime = manifest_path.stat().st_mtime if manifest_path.is_file() else None
+    if _FAVORITES_MTIME != mtime or not _FAVORITES_CACHE:
+        _FAVORITES_CACHE = _build_default_favorites()
+        _FAVORITES_MTIME = mtime
+    return _FAVORITES_CACHE
+
+
+FAVORITES = _get_default_favorites()
+
+# โพสต์คอมมูนิตี้ — รูปชุดแฟชั่นเดิม (bundled ที่ static/mock/community)
+_COMMUNITY_STATIC = Path(__file__).resolve().parents[2] / "frontend" / "static" / "mock" / "community"
 
 COMMUNITY_POSTS = [
-    {"author": "mint", "initial": "M", "caption": "ชุดออกกำลังกาย", "time_ago": "2 ชม.", "image": "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=600&h=750&fit=crop"},
-    {"author": "nara", "initial": "N", "caption": "ลุคไฮโซ", "time_ago": "5 ชม.", "image": "https://images.unsplash.com/photo-1483985988355-763728e1935b?w=600&h=750&fit=crop"},
-    {"author": "beam", "initial": "B", "caption": "ชุดไปทำงาน", "time_ago": "เมื่อวาน", "image": "https://plusprinting.bookplus.co.th/wp-content/uploads/2023/01/simple-office-outfit-ideas-07.jpg"},
-    {"author": "ploy", "initial": "P", "caption": "ชุดไปทะเลชิวๆ", "time_ago": "เมื่อวาน", "image": "https://images.unsplash.com/photo-1469334031218-e382a71b716b?w=600&h=750&fit=crop"},
-    {"author": "tong", "initial": "T", "caption": "เดรสสีพาสเทลไปเดท", "time_ago": "2 วัน", "image": "https://images.unsplash.com/photo-1539008835657-9e8e9680c956?w=600&h=750&fit=crop"},
-    {"author": "fah", "initial": "F", "caption": "สตรีทแวร์วันหยุด", "time_ago": "3 วัน", "image": "https://images.unsplash.com/photo-1529139574466-a303027c1d8b?w=600&h=750&fit=crop"},
+    {
+        "pk": 1,
+        "author": "mint",
+        "initial": "M",
+        "caption": "ชุดออกกำลังกาย",
+        "time_ago": "2 ชม.",
+        "image_key": "01_mint",
+    },
+    {
+        "pk": 2,
+        "author": "nara",
+        "initial": "N",
+        "caption": "ลุคไฮโซ",
+        "time_ago": "5 ชม.",
+        "image_key": "02_nara",
+    },
+    {
+        "pk": 3,
+        "author": "beam",
+        "initial": "B",
+        "caption": "ชุดไปทำงาน",
+        "time_ago": "เมื่อวาน",
+        "image_key": "03_beam",
+    },
+    {
+        "pk": 4,
+        "author": "ploy",
+        "initial": "P",
+        "caption": "ชุดไปทะเลชิวๆ",
+        "time_ago": "เมื่อวาน",
+        "image_key": "04_ploy",
+    },
+    {
+        "pk": 5,
+        "author": "tong",
+        "initial": "T",
+        "caption": "เดรสสีพาสเทลไปเดท",
+        "time_ago": "2 วัน",
+        "image_key": "05_tong",
+    },
+    {
+        "pk": 6,
+        "author": "fah",
+        "initial": "F",
+        "caption": "สตรีทแวร์วันหยุด",
+        "time_ago": "3 วัน",
+        "image_key": "06_fah",
+    },
 ]
 
 
@@ -253,19 +649,55 @@ def _image_to_data_uri(image) -> str:
     return f"data:image/jpeg;base64,{encoded}"
 
 
-def add_uploaded_items(request, files):
-    """Analyse each uploaded photo (dominant colour + Thai colour name) and store
-    it in the session so it appears across the mock wardrobe. Garment type defaults
-    to a top and is flagged for review so the user can correct it."""
+def _classify_garment(width: int, height: int) -> tuple[str, str, float]:
+    """จำแนกประเภท + ท่อนจากสัดส่วนรูป (สอดคล้อง ClothingProcessor)."""
+    aspect = width / height if height else 1.0
+    if aspect >= 1.25:
+        return "jeans", "bottom", 0.82
+    if aspect >= 1.05:
+        return "shorts", "bottom", 0.74
+    if aspect >= 0.95:
+        return "skirt", "bottom", 0.70
+    if aspect <= 0.72:
+        return "t_shirt", "top", 0.84
+    if aspect <= 0.85:
+        return "shirt", "top", 0.72
+    return "shirt", "top", 0.76
+
+
+def _mock_item_from_upload_rec(rec: dict) -> MockClothingItem:
+    meta = normalize_item_metadata(
+        garment_type=rec["garment_type"],
+        part=rec.get("part"),
+        formality=rec.get("formality"),
+        fabric_thickness=rec.get("fabric_thickness"),
+        primary_color_hex=rec["primary_color_hex"],
+        color_name_th=rec.get("color_name_th"),
+    )
+    return MockClothingItem(
+        pk=rec["pk"],
+        part=meta["part"],
+        garment_type=meta["garment_type"],
+        formality=meta["formality"],
+        fabric_thickness=meta["fabric_thickness"],
+        primary_color_hex=meta["primary_color_hex"],
+        image_url=rec["image"],
+        color_name_th=meta["color_name_th"],
+        needs_review=rec.get("needs_review", False),
+        is_verified=not rec.get("needs_review", False),
+    )
+
+
+def analyze_upload_batch(request, files):
+    """วิเคราะห์รูปที่อัปโหลด — เก็บชั่วคราวรอผู้ใช้กดบันทึก (ยังไม่เข้าตู้)."""
     from PIL import Image
 
     uploads = request.session.get(SESSION_UPLOAD_KEY, [])
     next_pk = UPLOAD_PK_BASE + len(uploads)
-    created = []
+    pending = []
     for f in files:
         try:
             image = Image.open(f)
-            # Fast path for large phone JPEGs: decode at reduced size (much quicker)
             try:
                 image.draft("RGB", (600, 750))
             except Exception:
@@ -273,48 +705,127 @@ def add_uploaded_items(request, files):
             image.load()
         except Exception:
             continue
+        w, h = image.size
         hex_code = _extract_dominant_color(image)
+        garment_type, part, confidence = _classify_garment(w, h)
+        meta = normalize_item_metadata(
+            garment_type=garment_type,
+            part=part,
+            primary_color_hex=hex_code,
+        )
+        needs_review = confidence < AI_CONFIDENCE_THRESHOLD
         record = {
             "pk": next_pk,
-            "part": "top",
-            "garment_type": "t_shirt",
-            "formality": 3,
-            "fabric_thickness": "medium",
-            "primary_color_hex": hex_code,
-            "color_name_th": thai_color_name(hex_code),
+            **meta,
             "image": _image_to_data_uri(image),
-            "needs_review": True,
+            "needs_review": needs_review,
+            "confidence": round(confidence, 2),
         }
-        uploads.append(record)
-        created.append(record)
+        pending.append(record)
         next_pk += 1
 
-    request.session[SESSION_UPLOAD_KEY] = uploads
+    request.session[SESSION_PENDING_UPLOAD_KEY] = pending
     request.session.modified = True
-    return created
+    return pending
+
+
+def get_pending_uploads(request):
+    pending = request.session.get(SESSION_PENDING_UPLOAD_KEY, [])
+    return [_mock_item_from_upload_rec(rec) for rec in pending if _upload_has_image(rec)]
+
+
+def confirm_pending_uploads(request, selected_pks: list[int]) -> int:
+    pending = request.session.get(SESSION_PENDING_UPLOAD_KEY, [])
+    if not pending:
+        return 0
+    selected = {int(p) for p in selected_pks}
+    to_save = [rec for rec in pending if rec["pk"] in selected and _upload_has_image(rec)]
+    uploads = request.session.get(SESSION_UPLOAD_KEY, [])
+    uploads.extend(to_save)
+    request.session[SESSION_UPLOAD_KEY] = uploads
+    request.session.pop(SESSION_PENDING_UPLOAD_KEY, None)
+    request.session.modified = True
+    return len(to_save)
+
+
+def discard_pending_uploads(request) -> None:
+    request.session.pop(SESSION_PENDING_UPLOAD_KEY, None)
+    request.session.modified = True
+
+
+def add_uploaded_items(request, files):
+    """Legacy alias — วิเคราะห์แล้วเก็บรอบันทึก."""
+    return analyze_upload_batch(request, files)
 
 
 # ── Session-based item edits ──────────────────────────────────────────────────
 
 def _all_base_items(request):
-    """Static demo items plus any photos the user uploaded this session."""
-    items = list(ITEMS)
+    """Static demo items (minus deleted) plus session uploads."""
+    _clean_session_uploads(request)
+    deleted = set(request.session.get(SESSION_DELETED_KEY, []))
+    items = [item for item in _get_static_items() if item.pk not in deleted]
     for rec in request.session.get(SESSION_UPLOAD_KEY, []):
+        meta = normalize_item_metadata(
+            garment_type=rec["garment_type"],
+            part=rec.get("part"),
+            formality=rec.get("formality"),
+            fabric_thickness=rec.get("fabric_thickness"),
+            primary_color_hex=rec["primary_color_hex"],
+            color_name_th=rec.get("color_name_th"),
+        )
         items.append(
             MockClothingItem(
                 pk=rec["pk"],
-                part=rec["part"],
-                garment_type=rec["garment_type"],
-                formality=rec["formality"],
-                fabric_thickness=rec["fabric_thickness"],
-                primary_color_hex=rec["primary_color_hex"],
+                part=meta["part"],
+                garment_type=meta["garment_type"],
+                formality=meta["formality"],
+                fabric_thickness=meta["fabric_thickness"],
+                primary_color_hex=meta["primary_color_hex"],
                 image_url=rec["image"],
-                color_name_th=rec.get("color_name_th"),
+                color_name_th=meta["color_name_th"],
                 needs_review=rec.get("needs_review", False),
                 is_verified=not rec.get("needs_review", False),
             )
         )
     return items
+
+
+def _upload_has_image(rec: dict) -> bool:
+    img = (rec.get("image") or "").strip()
+    return img.startswith("data:image/") and len(img) > 200
+
+
+def _clean_session_uploads(request) -> None:
+    uploads = request.session.get(SESSION_UPLOAD_KEY, [])
+    clean = [u for u in uploads if _upload_has_image(u)]
+    if len(clean) != len(uploads):
+        request.session[SESSION_UPLOAD_KEY] = clean
+        request.session.modified = True
+
+
+def reset_mock_wardrobe_session(request) -> None:
+    """คืนเสื้อผ้าเริ่มต้นทั้งหมด — ล้างรายการที่ลบและอัปโหลดเสียใน session."""
+    request.session.pop(SESSION_DELETED_KEY, None)
+    request.session.pop(SESSION_UPLOAD_KEY, None)
+    request.session.pop(SESSION_PENDING_UPLOAD_KEY, None)
+    request.session.modified = True
+
+
+def delete_item(request, pk):
+    """Remove an item from the mock wardrobe (session-backed)."""
+    pk = int(pk)
+    if pk >= UPLOAD_PK_BASE:
+        uploads = request.session.get(SESSION_UPLOAD_KEY, [])
+        request.session[SESSION_UPLOAD_KEY] = [u for u in uploads if u["pk"] != pk]
+    else:
+        deleted = set(request.session.get(SESSION_DELETED_KEY, []))
+        deleted.add(pk)
+        request.session[SESSION_DELETED_KEY] = list(deleted)
+    edits = request.session.get(SESSION_EDIT_KEY, {})
+    edits.pop(str(pk), None)
+    request.session[SESSION_EDIT_KEY] = edits
+    request.session.modified = True
 
 
 def _items_with_edits(request):
@@ -328,16 +839,24 @@ def _items_with_edits(request):
         if not data:
             result.append(base)
             continue
+        meta = normalize_item_metadata(
+            garment_type=data.get("garment_type", base.garment_type),
+            part=data.get("part", base.part),
+            formality=int(data.get("formality", base.formality)),
+            fabric_thickness=data.get("fabric_thickness", base.fabric_thickness),
+            primary_color_hex=data.get("primary_color_hex", base.primary_color_hex),
+            color_name_th=data.get("color_name_th", base.color_name_th),
+        )
         result.append(
             MockClothingItem(
                 pk=base.pk,
-                part=data.get("part", base.part),
-                garment_type=data.get("garment_type", base.garment_type),
-                formality=int(data.get("formality", base.formality)),
-                fabric_thickness=data.get("fabric_thickness", base.fabric_thickness),
-                primary_color_hex=data.get("primary_color_hex", base.primary_color_hex),
+                part=meta["part"],
+                garment_type=meta["garment_type"],
+                formality=meta["formality"],
+                fabric_thickness=meta["fabric_thickness"],
+                primary_color_hex=meta["primary_color_hex"],
                 image_url=base.image.url,
-                color_name_th=data.get("color_name_th", base.color_name_th),
+                color_name_th=meta["color_name_th"],
                 garment_type_display=data.get("garment_type_display", base.garment_type_display),
                 needs_review=False,
                 is_verified=True,
@@ -368,11 +887,11 @@ def get_destination(pk):
 
 
 def save_item_edit(request, pk, cleaned_data):
-    from wardrobe.forms import color_label_for_hex, snap_to_palette
-
-    base = _find(int(pk))
+    pk = int(pk)
+    current = get_item(pk, request)
+    base = current or _find(pk)
     hex_code = cleaned_data["primary_color_hex"]
-    if base and hex_code == snap_to_palette(base.primary_color_hex):
+    if base and snap_to_palette(hex_code) == snap_to_palette(base.primary_color_hex):
         color_name_th = base.color_name_th
     else:
         color_name_th = color_label_for_hex(hex_code)
@@ -381,18 +900,23 @@ def save_item_edit(request, pk, cleaned_data):
     if base and cleaned_data["garment_type"] == base.garment_type:
         garment_type_display = base.garment_type_display
 
+    meta = normalize_item_metadata(
+        garment_type=cleaned_data["garment_type"],
+        part=cleaned_data["part"],
+        formality=int(cleaned_data["formality"]),
+        fabric_thickness=cleaned_data["fabric_thickness"],
+        primary_color_hex=hex_code,
+        color_name_th=color_name_th,
+    )
+
     edits = request.session.get(SESSION_EDIT_KEY, {})
     edits[str(pk)] = {
-        "garment_type": cleaned_data["garment_type"],
-        "part": cleaned_data["part"],
-        "formality": int(cleaned_data["formality"]),
-        "fabric_thickness": cleaned_data["fabric_thickness"],
-        "primary_color_hex": hex_code,
-        "color_name_th": color_name_th,
+        **meta,
         "garment_type_display": garment_type_display,
     }
     request.session[SESSION_EDIT_KEY] = edits
     request.session.modified = True
+    return get_item(pk, request)
 
 
 # ── Outfit URL helpers (mirror the real view helpers) ─────────────────────────
@@ -430,9 +954,10 @@ def _outfit_base_query(destination, outfits, overrides):
     params = [f"destination={destination.pk}"]
     for i, outfit in enumerate(outfits):
         top_pk = overrides.get(i, {}).get("top", outfit.top.pk)
-        bottom_pk = overrides.get(i, {}).get("bottom", outfit.bottom.pk)
         params.append(f"t{i}={top_pk}")
-        params.append(f"b{i}={bottom_pk}")
+        if not outfit.is_full_outfit:
+            bottom_pk = overrides.get(i, {}).get("bottom", outfit.bottom.pk)
+            params.append(f"b{i}={bottom_pk}")
     return "&".join(params)
 
 
@@ -440,7 +965,10 @@ def _enrich_outfit_urls(destination, outfits, overrides):
     for i, outfit in enumerate(outfits):
         base = _outfit_base_query(destination, outfits, overrides)
         outfit.swap_top_url = f"?{base}&swap={i}&piece=top"
-        outfit.swap_bottom_url = f"?{base}&swap={i}&piece=bottom"
+        if outfit.is_full_outfit:
+            outfit.swap_bottom_url = ""
+        else:
+            outfit.swap_bottom_url = f"?{base}&swap={i}&piece=bottom"
     return f"?{_outfit_base_query(destination, outfits, overrides)}"
 
 
@@ -455,8 +983,204 @@ def _matrix_labels(destination):
 # ── Context builders ──────────────────────────────────────────────────────────
 
 def _meta(request):
-    username = DEMO_USERNAME
+    profile = get_profile(request)
+    username = profile["display_name"]
     return username, (username[:1] or "U").upper()
+
+
+def _build_favorite(request, pk, top_pk, bottom_pk, dest_pk, name, match_score, match_theory, full_outfit=False):
+    top = get_item(top_pk, request)
+    bottom = get_item(bottom_pk, request) if bottom_pk else None
+    destination = get_destination(dest_pk) if dest_pk else None
+    if not top:
+        return None
+    as_full = full_outfit or is_full_outfit(top.garment_type)
+    if as_full:
+        bottom = None
+        display_theory = _humanize_full_outfit_theory(top, destination)
+    else:
+        if not bottom:
+            return None
+        display_theory = _humanize_pair_theory(top, bottom, match_score)
+    return MockFavorite(
+        pk, destination, top, bottom, name, match_score, display_theory,
+        full_outfit=as_full,
+    )
+
+
+def get_favorites(request):
+    hidden = set(request.session.get(SESSION_HIDDEN_FAVORITES_KEY, []))
+    favorites = [f for f in _get_default_favorites() if f.pk not in hidden]
+    for rec in request.session.get(SESSION_FAVORITES_KEY, []):
+        fav = _build_favorite(
+            request,
+            rec["pk"],
+            rec["top_pk"],
+            rec.get("bottom_pk"),
+            rec.get("dest_pk"),
+            rec.get("name", ""),
+            rec["match_score"],
+            rec["match_theory"],
+            full_outfit=rec.get("is_full_outfit", False),
+        )
+        if fav:
+            favorites.insert(0, fav)
+    return favorites
+
+
+def save_favorite(request, top_pk, bottom_pk, dest_pk, name):
+    from wardrobe.services.outfit_engine import ColorMatcher
+    from wardrobe.services.outfit_scorer import (
+        FULL_OUTFIT_COLOR_SCORE,
+        WEIGHT_COLOR,
+        WEIGHT_CORRECTNESS,
+        WEIGHT_WEATHER,
+        build_matrix_a,
+        build_matrix_b,
+        score_correctness,
+        score_weather,
+    )
+
+    top = get_item(int(top_pk), request)
+    if not top:
+        return None
+
+    if is_full_outfit(top.garment_type):
+        destination = get_destination(dest_pk) if dest_pk else None
+        matrix_a = build_matrix_a(destination) if destination else build_matrix_a(DESTINATIONS[0])
+        piece_b = build_matrix_b(top)
+        corr = score_correctness(piece_b, matrix_a)
+        weather = score_weather(piece_b, matrix_a.weather)
+        match_score = round(
+            WEIGHT_CORRECTNESS * corr
+            + WEIGHT_WEATHER * weather
+            + WEIGHT_COLOR * FULL_OUTFIT_COLOR_SCORE
+        )
+        match_theory = _humanize_full_outfit_theory(top, destination)
+        bottom_pk_val = None
+        is_full = True
+    else:
+        bottom = get_item(int(bottom_pk), request)
+        if not bottom:
+            return None
+        match = ColorMatcher().score_pair(top, bottom)
+        match_score = round(match.score)
+        match_theory = _humanize_pair_theory(top, bottom, match.score)
+        bottom_pk_val = int(bottom_pk)
+        is_full = False
+
+    session_favs = request.session.get(SESSION_FAVORITES_KEY, [])
+    pk = FAVORITE_PK_BASE + len(session_favs)
+    record = {
+        "pk": pk,
+        "top_pk": int(top_pk),
+        "bottom_pk": bottom_pk_val,
+        "dest_pk": int(dest_pk) if dest_pk else None,
+        "name": name or "",
+        "match_score": match_score,
+        "match_theory": match_theory,
+        "is_full_outfit": is_full,
+    }
+    session_favs.append(record)
+    request.session[SESSION_FAVORITES_KEY] = session_favs
+    request.session.modified = True
+    return _build_favorite(
+        request, pk, record["top_pk"], record["bottom_pk"],
+        record["dest_pk"], record["name"], record["match_score"], record["match_theory"],
+        full_outfit=is_full,
+    )
+
+
+def delete_favorite(request, pk):
+    pk = int(pk)
+    if pk < FAVORITE_PK_BASE:
+        hidden = set(request.session.get(SESSION_HIDDEN_FAVORITES_KEY, []))
+        hidden.add(pk)
+        request.session[SESSION_HIDDEN_FAVORITES_KEY] = list(hidden)
+    else:
+        session_favs = request.session.get(SESSION_FAVORITES_KEY, [])
+        request.session[SESSION_FAVORITES_KEY] = [f for f in session_favs if f["pk"] != pk]
+    request.session.modified = True
+
+
+def _community_image(image_key: str) -> str:
+    from django.templatetags.static import static
+
+    community_path = _COMMUNITY_STATIC / f"{image_key}.jpg"
+    if community_path.is_file():
+        return static(f"mock/community/{image_key}.jpg")
+    path = _image_file_for_key(image_key)
+    if path:
+        return static(f"mock/wardrobe/{path.stem}.jpg")
+    return _placeholder("#9ca3af")
+
+
+def _all_community_posts(request):
+    profile = get_profile(request)
+    username = profile["display_name"]
+    user_posts = []
+    for rec in request.session.get(SESSION_COMMUNITY_KEY, []):
+        user_posts.append({**rec, "is_mine": rec.get("author") == username})
+    static_posts = []
+    for rec in COMMUNITY_POSTS:
+        post = {**rec, "is_mine": False}
+        post["image"] = _community_image(rec["image_key"])
+        static_posts.append(post)
+    return user_posts + static_posts
+
+
+def add_community_post(request, image_file, caption):
+    from PIL import Image
+
+    image = Image.open(image_file)
+    try:
+        image.draft("RGB", (600, 750))
+    except Exception:
+        pass
+    image.load()
+    profile = get_profile(request)
+    author = profile["display_name"]
+    posts = request.session.get(SESSION_COMMUNITY_KEY, [])
+    pk = COMMUNITY_PK_BASE + len(posts)
+    posts.insert(0, {
+        "pk": pk,
+        "author": author,
+        "initial": (author[:1] or "U").upper(),
+        "caption": caption or "ลุคใหม่",
+        "time_ago": "เมื่อกี้",
+        "image": _image_to_data_uri(image),
+        "is_mine": True,
+    })
+    request.session[SESSION_COMMUNITY_KEY] = posts
+    request.session.modified = True
+    return pk
+
+
+def delete_community_post(request, post_id):
+    post_id = int(post_id)
+    posts = request.session.get(SESSION_COMMUNITY_KEY, [])
+    request.session[SESSION_COMMUNITY_KEY] = [p for p in posts if p["pk"] != post_id]
+    request.session.modified = True
+
+
+def save_feedback(request, kind, subject, detail):
+    feedbacks = request.session.get(SESSION_FEEDBACK_KEY, [])
+    entry = {
+        "pk": len(feedbacks) + 1,
+        "kind": kind,
+        "subject": subject,
+        "detail": detail,
+        "created": timezone.now().strftime("%d/%m/%Y %H:%M"),
+        "status": "รับเรื่องแล้ว",
+    }
+    feedbacks.insert(0, entry)
+    request.session[SESSION_FEEDBACK_KEY] = feedbacks[:20]
+    request.session.modified = True
+    return entry
+
+
+def feedback_context(request):
+    return {"recent_feedbacks": request.session.get(SESSION_FEEDBACK_KEY, [])}
 
 
 def dashboard_context(request):
@@ -469,18 +1193,19 @@ def dashboard_context(request):
     dest_stats = []
     for dest in DESTINATIONS:
         allowed = set(dest.allowed_categories)
-        count = sum(1 for i in items if i.garment_type in allowed)
+        count = sum(1 for i in items if get_base_garment_type(i.garment_type) in allowed)
         dest_stats.append({"dest": dest, "count": count})
 
     avg_formality = sum(i.formality for i in items) / len(items) if items else 0
-    latest_fav = FAVORITES[0] if FAVORITES else None
+    favorites = get_favorites(request)
+    latest_fav = favorites[0] if favorites else None
     username, avatar_letter = _meta(request)
 
     return {
         "total": len(items),
         "needs_review": sum(1 for i in items if i.needs_review),
-        "favorites_count": len(FAVORITES),
-        "suggest_today": min(3, len(FAVORITES)),
+        "favorites_count": len(favorites),
+        "suggest_today": min(3, len(favorites)),
         "recent": items[:3],
         "destinations": dest_stats,
         "unique_colors": unique_colors,
@@ -491,10 +1216,14 @@ def dashboard_context(request):
         "unused_count": sum(1 for i in items if not i.is_verified),
         "username": username,
         "avatar_letter": avatar_letter,
+        "weather": fetch_weather(),
     }
 
 
 def wardrobe_context(request):
+    if _get_static_items() and not _all_base_items(request):
+        reset_mock_wardrobe_session(request)
+
     form = WardrobeSearchForm(request.GET or None)
     all_items = _items_with_edits(request)
     items = list(all_items)
@@ -515,7 +1244,7 @@ def wardrobe_context(request):
         "items": items,
         "total_items": len(all_items),
         "form": form,
-        "garment_types": GARMENT_TYPES,
+        "garment_category_groups": GARMENT_CATEGORY_GROUPS,
         "color_choices": WARDROBE_COLORS,
         "formality_choices": FORMALITY_CHOICES,
         "thickness_choices": FABRIC_THICKNESS_CHOICES,
@@ -576,7 +1305,12 @@ def outfit_context(request):
         slot_idx = int(swap_slot)
         if slot_idx < len(outfits):
             current = outfits[slot_idx]
-            ref_item = current.top if swap_piece == "top" else current.bottom
+            if current.is_full_outfit:
+                ref_item = current.top
+            elif swap_piece == "top":
+                ref_item = current.top
+            else:
+                ref_item = current.bottom
             alts = OutfitBuilder().part_alternatives(ref_item, user_items, destination)
             ctx["swap_alternatives"] = [
                 {
@@ -586,19 +1320,21 @@ def outfit_context(request):
                 for alt in alts[:6]
             ]
             ctx["swap_current"] = ref_item
+            ctx["swap_is_full_outfit"] = current.is_full_outfit
 
     return ctx
 
 
-def favorites_context():
-    return {"outfits": FAVORITES}
+def favorites_context(request):
+    return {"outfits": get_favorites(request)}
 
 
-def community_context():
+def community_context(request):
+    username, avatar_letter = _meta(request)
     return {
-        "posts": COMMUNITY_POSTS,
-        "username": DEMO_USERNAME,
-        "avatar_letter": DEMO_USERNAME[:1].upper(),
+        "posts": _all_community_posts(request),
+        "username": username,
+        "avatar_letter": avatar_letter,
     }
 
 
@@ -647,11 +1383,12 @@ def save_profile(request, cleaned_data):
 def profile_context(request):
     items = _items_with_edits(request)
     profile = get_profile(request)
+    favorites = get_favorites(request)
     return {
         "username": profile["display_name"],
         "email": profile["email"],
         "total_items": len(items),
-        "favorites_count": len(FAVORITES),
+        "favorites_count": len(favorites),
         "style_pref": profile["style_pref"],
         "weight_correctness": profile["weight_correctness"],
         "weight_weather": profile["weight_weather"],

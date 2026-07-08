@@ -56,17 +56,18 @@
                 <span class="match-pill">{{ outfit.score|floatformat:0 }}%</span>
             </div>
 
-            <div class="outfit-pair">
-                <a href="{{ outfit.swap_top_url }}" class="outfit-piece {% if swap_slot == forloop.counter0|stringformat:'s' and swap_piece == 'top' %}is-swapping{% endif %}">
+            <div class="outfit-pair{% if outfit.is_full_outfit %} outfit-set-single{% endif %}">
+                <a href="{{ outfit.swap_top_url }}" class="outfit-piece {% if outfit.is_full_outfit %}outfit-piece-full{% endif %} {% if swap_slot == forloop.counter0|stringformat:'s' and swap_piece == 'top' %}is-swapping{% endif %}">
                     <div class="piece-img">
                         <img src="{{ outfit.top.image.url }}" alt="">
                         <span class="piece-edit"><i class="ti ti-replace"></i> สลับ</span>
                     </div>
-                    <div class="piece-label">ท่อนบน</div>
+                    <div class="piece-label">{% if outfit.is_full_outfit %}ชุดเซ็ต{% else %}ท่อนบน{% endif %}</div>
                     <div class="piece-name">{{ outfit.top.get_garment_type_display }}</div>
                     <div class="piece-color"><span class="color-dot" style="background:{{ outfit.top.primary_color_hex }}"></span>{{ outfit.top.color_name_th }}</div>
                 </a>
 
+                {% if not outfit.is_full_outfit %}
                 <div class="pair-connector"><i class="ti ti-plus"></i></div>
 
                 <a href="{{ outfit.swap_bottom_url }}" class="outfit-piece {% if swap_slot == forloop.counter0|stringformat:'s' and swap_piece == 'bottom' %}is-swapping{% endif %}">
@@ -78,6 +79,7 @@
                     <div class="piece-name">{{ outfit.bottom.get_garment_type_display }}</div>
                     <div class="piece-color"><span class="color-dot" style="background:{{ outfit.bottom.primary_color_hex }}"></span>{{ outfit.bottom.color_name_th }}</div>
                 </a>
+                {% endif %}
             </div>
 
             <div class="outfit-score-bar">
@@ -94,7 +96,11 @@
                         <span class="score-val">{{ outfit.weather_score|floatformat:0 }}%</span>
                     </div>
                     <div class="score-row">
+                        {% if outfit.is_full_outfit %}
+                        <span>ชุดเซ็ต (40%)</span>
+                        {% else %}
                         <span>สี (40%)</span>
+                        {% endif %}
                         <div class="bar-track mini"><div class="bar-fill color" style="width:{{ outfit.color_score }}%"></div></div>
                         <span class="score-val">{{ outfit.color_score|floatformat:0 }}%</span>
                     </div>
@@ -105,7 +111,9 @@
             <form method="post" action="{% url 'wardrobe:save_outfit' %}" class="outfit-save-form">
                 {% csrf_token %}
                 <input type="hidden" name="top_id" value="{{ outfit.top.pk }}">
+                {% if not outfit.is_full_outfit %}
                 <input type="hidden" name="bottom_id" value="{{ outfit.bottom.pk }}">
+                {% endif %}
                 <input type="hidden" name="destination_id" value="{{ destination.pk }}">
                 <input type="text" name="name" class="form-input" placeholder="ตั้งชื่อชุด (ไม่บังคับ)">
                 <button type="submit" class="btn-primary btn-block"><i class="ti ti-heart"></i> บันทึกชุดนี้</button>
@@ -119,7 +127,7 @@
     {% if swap_alternatives %}
     <div class="swap-panel">
         <div class="swap-panel-head">
-            <h3>สลับ{% if swap_piece == 'top' %}ท่อนบน{% else %}ท่อนล่าง{% endif %}</h3>
+            <h3>สลับ{% if swap_is_full_outfit %}ชุดเซ็ต{% elif swap_piece == 'top' %}ท่อนบน{% else %}ท่อนล่าง{% endif %}</h3>
             <a href="{{ outfit_base_url }}" class="swap-close"><i class="ti ti-x"></i></a>
         </div>
         <div class="swap-current">

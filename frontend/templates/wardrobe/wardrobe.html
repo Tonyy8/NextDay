@@ -7,11 +7,8 @@
     <div class="sub-hero row-between">
         <div>
             <h1>ตู้เสื้อผ้าดิจิทัล</h1>
-            <p>เสื้อผ้าทั้งหมด {{ total_items }} ชิ้น — กดที่การ์ดเพื่อแก้ไขใน Mockup</p>
+            <p>เสื้อผ้าทั้งหมด {{ total_items }} ชิ้น — กดที่การ์ดเพื่อแก้ไข</p>
         </div>
-        {% if mock_mode %}
-        <span class="mock-badge">Mockup</span>
-        {% endif %}
     </div>
 
     <form method="get" class="search-bar">
@@ -34,6 +31,7 @@
                     {% elif item.image %}
                         <img src="{{ item.image.url }}" alt="">
                     {% endif %}
+                    <span class="ed-heart"><i class="ti ti-heart"></i></span>
                     <span class="wardrobe-card-overlay"><i class="ti ti-pencil"></i> แก้ไข</span>
                 </div>
                 <div class="wardrobe-card-body">
@@ -79,8 +77,12 @@
             <div class="form-group">
                 <label for="f-garment_type">ประเภท</label>
                 <select name="garment_type" class="form-input" id="f-garment_type">
-                    {% for val, label in garment_types %}
-                    <option value="{{ val }}">{{ label }}</option>
+                    {% for group_label, group_items in garment_category_groups %}
+                    <optgroup label="{{ group_label }}">
+                        {% for val, label in group_items %}
+                        <option value="{{ val }}">{{ label }}</option>
+                        {% endfor %}
+                    </optgroup>
                     {% endfor %}
                 </select>
             </div>
@@ -162,6 +164,14 @@
         modal.hidden = true;
         document.body.style.overflow = "";
     }
+
+    document.getElementById("f-garment_type").addEventListener("change", function () {
+        var bottomTypes = [
+            "jeans", "slacks", "chinos", "shorts", "joggers", "sweatpants", "leggings", "skirt",
+            "pants"
+        ];
+        document.getElementById("f-part").value = bottomTypes.indexOf(this.value) >= 0 ? "bottom" : "top";
+    });
 
     cards.forEach(function (card) {
         card.querySelector(".wardrobe-card-btn").addEventListener("click", function () {

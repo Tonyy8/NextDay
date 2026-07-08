@@ -1,16 +1,16 @@
 from django.contrib.auth.models import User
 from django.db import models
 
-
-GARMENT_TYPES = [
-    ("shirt", "เสื้อเชิ้ต"),
-    ("t_shirt", "เสื้อยืด"),
-    ("blouse", "เสื้อผ้า"),
-    ("jacket", "แจ็คเก็ต"),
-    ("pants", "กางเกง"),
-    ("shorts", "กางเกงขาสั้น"),
-    ("skirt", "กระโปรง"),
-]
+from database.garment_catalog import (
+    BOTTOM_TYPES,
+    GARMENT_CATEGORY_GROUPS,
+    GARMENT_TYPES,
+    ONE_PIECE_TYPES,
+    TOP_TYPES,
+    get_base_garment_type,
+    grouped_choices,
+    infer_part,
+)
 
 PART_CHOICES = [
     ("top", "ท่อนบน"),
@@ -35,9 +35,6 @@ STYLE_CHOICES = [
     ("formal", "ทางการ"),
     ("sporty", "กีฬา"),
 ]
-
-TOP_TYPES = {"shirt", "t_shirt", "blouse", "jacket"}
-BOTTOM_TYPES = {"pants", "shorts", "skirt"}
 
 
 class Destination(models.Model):
@@ -90,7 +87,7 @@ class ClothingItem(models.Model):
     cropped_image = models.ImageField(upload_to="wardrobe/crops/%Y/%m/%d/", blank=True, null=True)
 
     part = models.CharField(max_length=10, choices=PART_CHOICES)
-    garment_type = models.CharField(max_length=20, choices=GARMENT_TYPES)
+    garment_type = models.CharField(max_length=32, choices=GARMENT_TYPES)
     formality = models.IntegerField(default=3, help_text="ระดับความสุภาพ 1-6")
     fabric_thickness = models.CharField(
         max_length=10,

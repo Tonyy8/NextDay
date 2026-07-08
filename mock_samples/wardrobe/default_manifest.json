@@ -1,0 +1,202 @@
+[
+  {
+    "pk": 1,
+    "img_key": "01_2000007777453_1-20230324105515",
+    "source_name": "2000007777453_1-20230324105515-.webp",
+    "garment_type": "shorts",
+    "color_hex": "#111827",
+    "color_name_th": "ดำ",
+    "formality": 2,
+    "fabric_thickness": "thin"
+  },
+  {
+    "pk": 2,
+    "img_key": "02_2000007780309_1-20230323141950",
+    "source_name": "2000007780309_1-20230323141950-.webp",
+    "garment_type": "joggers",
+    "color_hex": "#d4b896",
+    "color_name_th": "เบจ",
+    "formality": 2,
+    "fabric_thickness": "thin"
+  },
+  {
+    "pk": 3,
+    "img_key": "03_2000008117913_2-20240613155437",
+    "source_name": "2000008117913_2-20240613155437-.jpg",
+    "garment_type": "jeans",
+    "color_hex": "#38bdf8",
+    "color_name_th": "ฟ้า",
+    "formality": 4,
+    "fabric_thickness": "thick"
+  },
+  {
+    "pk": 4,
+    "img_key": "04_252fd4c91256a25dec2a0dded8f632deb42e4e93",
+    "source_name": "252fd4c91256a25dec2a0dded8f632deb42e4e93_xxl-1.jpg",
+    "garment_type": "shirt",
+    "color_hex": "#111827",
+    "color_name_th": "ดำ",
+    "formality": 5,
+    "fabric_thickness": "medium"
+  },
+  {
+    "pk": 5,
+    "img_key": "05_7628907877582_01_ebb15cd5-7b1d-48ce-9b2b",
+    "source_name": "7628907877582_01_ebb15cd5-7b1d-48ce-9b2b-d332862517c3.webp",
+    "garment_type": "chinos",
+    "color_hex": "#6b7280",
+    "color_name_th": "เทา",
+    "formality": 3,
+    "fabric_thickness": "medium"
+  },
+  {
+    "pk": 6,
+    "img_key": "06_8x",
+    "source_name": "8x.jpg",
+    "garment_type": "t_shirt",
+    "color_hex": "#111827",
+    "color_name_th": "ดำ",
+    "formality": 2,
+    "fabric_thickness": "thin"
+  },
+  {
+    "pk": 7,
+    "img_key": "07_aad018e015c7e95e6fe3d47bf658dd78",
+    "source_name": "aad018e015c7e95e6fe3d47bf658dd78.png",
+    "garment_type": "shirt",
+    "color_hex": "#38bdf8",
+    "color_name_th": "ฟ้า",
+    "formality": 3,
+    "fabric_thickness": "medium"
+  },
+  {
+    "pk": 8,
+    "img_key": "08_be25c3313473ebace88aed83963821ef5c28782f",
+    "source_name": "be25c3313473ebace88aed83963821ef5c28782f_xxl-1.jpg",
+    "garment_type": "jeans",
+    "color_hex": "#111827",
+    "color_name_th": "ดำ",
+    "formality": 2,
+    "fabric_thickness": "thick"
+  },
+  {
+    "pk": 9,
+    "img_key": "09_champion-beachshort-menrev-online-433278",
+    "source_name": "champion-beachshort-menrev-online-4332785.webp",
+    "garment_type": "shorts",
+    "color_hex": "#d4b896",
+    "color_name_th": "เบจ",
+    "formality": 2,
+    "fabric_thickness": "thin"
+  },
+  {
+    "pk": 10,
+    "img_key": "10_fashion-ladies-denim-shorts-cotton-women",
+    "source_name": "Fashion-Ladies-Denim-Shorts-Cotton-Women-S-Ripped-Denim-Jeans-Shorts.webp",
+    "garment_type": "shorts",
+    "color_hex": "#6b7280",
+    "color_name_th": "เทา",
+    "formality": 2,
+    "fabric_thickness": "medium"
+  },
+  {
+    "pk": 11,
+    "img_key": "11_fdb78a6b6f27be3c222738f4e5cccd93566abb01",
+    "source_name": "fdb78a6b6f27be3c222738f4e5cccd93566abb017ec162127b745db14e34724c.webp",
+    "garment_type": "jeans",
+    "color_hex": "#2c5ead",
+    "color_name_th": "น้ำเงิน",
+    "formality": 3,
+    "fabric_thickness": "thick"
+  },
+  {
+    "pk": 12,
+    "img_key": "12_goods_56_479208_3x4",
+    "source_name": "goods_56_479208_3x4.avif",
+    "garment_type": "jacket",
+    "color_hex": "#c4a574",
+    "color_name_th": "กากี",
+    "formality": 3,
+    "fabric_thickness": "medium"
+  },
+  {
+    "pk": 13,
+    "img_key": "13_images-1",
+    "source_name": "images (1).jpg",
+    "garment_type": "t_shirt",
+    "color_hex": "#ffffff",
+    "color_name_th": "ขาว",
+    "formality": 2,
+    "fabric_thickness": "thin"
+  },
+  {
+    "pk": 14,
+    "img_key": "14_images",
+    "source_name": "images.jpg",
+    "garment_type": "dress",
+    "color_hex": "#111827",
+    "color_name_th": "ดำ",
+    "formality": 4,
+    "fabric_thickness": "medium"
+  },
+  {
+    "pk": 15,
+    "img_key": "15_keds_08-1533-1_3",
+    "source_name": "keds_08-1533-1_3.webp",
+    "garment_type": "shorts",
+    "color_hex": "#111827",
+    "color_name_th": "ดำ",
+    "formality": 2,
+    "fabric_thickness": "thin"
+  },
+  {
+    "pk": 16,
+    "img_key": "16_original",
+    "source_name": "original.jpg",
+    "garment_type": "dress",
+    "color_hex": "#38bdf8",
+    "color_name_th": "ฟ้า",
+    "formality": 4,
+    "fabric_thickness": "thin"
+  },
+  {
+    "pk": 17,
+    "img_key": "17_studiosession-2301",
+    "source_name": "StudioSession-2301.webp",
+    "garment_type": "shirt",
+    "color_hex": "#ffffff",
+    "color_name_th": "ขาว",
+    "formality": 4,
+    "fabric_thickness": "medium"
+  },
+  {
+    "pk": 18,
+    "img_key": "18_wtcth-bp_307746-front-zoom",
+    "source_name": "WTCTH-BP_307746-front-zoom.avif",
+    "garment_type": "t_shirt",
+    "color_hex": "#1e3a5f",
+    "color_name_th": "กรม",
+    "formality": 2,
+    "fabric_thickness": "thin"
+  },
+  {
+    "pk": 19,
+    "img_key": "19_classic-shorts-men",
+    "source_name": "กางเกงขาสั้นคลาสสิกสำหรับผู้ชาย.avif",
+    "garment_type": "shorts",
+    "color_hex": "#1e3a5f",
+    "color_name_th": "กรม",
+    "formality": 2,
+    "fabric_thickness": "thin"
+  },
+  {
+    "pk": 20,
+    "img_key": "20_grey-suit-men",
+    "source_name": "grey-suit-men.png",
+    "garment_type": "suit",
+    "color_hex": "#6b7280",
+    "color_name_th": "เทา",
+    "formality": 6,
+    "fabric_thickness": "medium"
+  }
+]

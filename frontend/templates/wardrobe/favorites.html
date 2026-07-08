@@ -13,16 +13,18 @@
     <div class="favorites-grid">
         {% for outfit in outfits %}
         <article class="favorite-card">
-            <div class="favorite-images">
+            <div class="favorite-images{% if outfit.is_full_outfit %} favorite-set-single{% endif %}">
                 <div class="favorite-piece">
                     {% if outfit.top_item.image %}<img src="{{ outfit.top_item.image.url }}" alt="">{% endif %}
                     <span>{{ outfit.top_item.get_garment_type_display }}</span>
                 </div>
+                {% if not outfit.is_full_outfit %}
                 <div class="favorite-plus"><i class="ti ti-plus"></i></div>
                 <div class="favorite-piece">
                     {% if outfit.bottom_item.image %}<img src="{{ outfit.bottom_item.image.url }}" alt="">{% endif %}
                     <span>{{ outfit.bottom_item.get_garment_type_display }}</span>
                 </div>
+                {% endif %}
             </div>
             <div class="favorite-body">
                 <div class="favorite-head">
@@ -33,8 +35,12 @@
                     <div class="favorite-dest">{{ outfit.destination.icon }} {{ outfit.destination.name }}</div>
                 {% endif %}
                 <p class="favorite-desc">
+                    {% if outfit.is_full_outfit %}
+                    {{ outfit.top_item.get_garment_type_display }} สี{{ outfit.top_item.color_name_th }} · ชุดเซ็ต
+                    {% else %}
                     {{ outfit.top_item.get_garment_type_display }} สี{{ outfit.top_item.color_name_th }}
                     + {{ outfit.bottom_item.get_garment_type_display }} สี{{ outfit.bottom_item.color_name_th }}
+                    {% endif %}
                 </p>
                 <small class="favorite-theory">{{ outfit.match_theory }}</small>
                 <form method="post" action="{% url 'wardrobe:delete_favorite' outfit.pk %}">

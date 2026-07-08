@@ -20,7 +20,8 @@
 }
 
 body {
-    font-family: "Segoe UI", Tahoma, sans-serif;
+    font-family: var(--font-app, "Sarabun", "Noto Sans Thai", sans-serif);
+    font-size: 17px;
     background: var(--bg);
     color: var(--text);
     line-height: 1.6;

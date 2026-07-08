@@ -8,7 +8,6 @@
             <h1>คอมมูนิตี้แฟชั่น</h1>
             <p>แชร์ลุคที่ชอบ ให้ทุกคนใน NEXTDAY เห็นได้</p>
         </div>
-        <span class="mock-badge">Mockup</span>
     </div>
 
     {% if not user.is_authenticated %}
@@ -28,25 +27,28 @@
         {% if user.is_authenticated %}
         <aside class="community-upload card">
             <div class="card-label-dark">อัปโหลดลุคที่ชอบ</div>
-            <p class="upload-hint">เลือกรูปแฟชั่นที่อยากแชร์ (ตัวอย่างหน้าจอ)</p>
+            <p class="upload-hint">เลือกรูปแฟชั่นที่อยากแชร์</p>
 
-            <label class="upload-drop" id="upload-drop">
-                <input type="file" accept="image/*" id="upload-input" hidden>
-                <div class="upload-drop-inner" id="upload-preview">
-                    <i class="ti ti-photo-plus"></i>
-                    <span>คลิกหรือลากรูปมาวาง</span>
-                    <small>JPG, PNG</small>
+            <form method="post" enctype="multipart/form-data" id="community-form">
+                {% csrf_token %}
+                <label class="upload-drop" id="upload-drop">
+                    <input type="file" name="image" accept="image/*" id="upload-input" required hidden>
+                    <div class="upload-drop-inner" id="upload-preview">
+                        <i class="ti ti-photo-plus"></i>
+                        <span>คลิกหรือลากรูปมาวาง</span>
+                        <small>JPG, PNG</small>
+                    </div>
+                </label>
+
+                <div class="form-group">
+                    <label for="caption">คำบรรยาย</label>
+                    <input type="text" name="caption" id="caption" class="form-input" placeholder="เช่น ลุคไปคาเฟ่วันหยุด">
                 </div>
-            </label>
 
-            <div class="form-group">
-                <label for="caption">คำบรรยาย</label>
-                <input type="text" id="caption" class="form-input" placeholder="เช่น ลุคไปคาเฟ่วันหยุด">
-            </div>
-
-            <button type="button" class="btn-primary btn-block" id="upload-btn">
-                <i class="ti ti-upload"></i> แชร์ลุค
-            </button>
+                <button type="submit" class="btn-primary btn-block" id="upload-btn">
+                    <i class="ti ti-upload"></i> แชร์ลุค
+                </button>
+            </form>
         </aside>
         {% endif %}
 
@@ -67,6 +69,14 @@
                                 <div class="post-time">{{ post.time_ago }}</div>
                             </div>
                         </div>
+                        {% if post.is_mine %}
+                        <form method="post" class="community-delete" onsubmit="return confirm('ลบโพสต์นี้?')">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="delete">
+                            <input type="hidden" name="post_id" value="{{ post.pk }}">
+                            <button type="submit" class="btn-icon-danger" title="ลบโพสต์"><i class="ti ti-trash"></i></button>
+                        </form>
+                        {% endif %}
                     </div>
                     <div class="community-img-wrap">
                         <img src="{{ post.image }}" alt="{{ post.caption }}" loading="lazy">
@@ -75,6 +85,8 @@
                         <p class="post-caption">{{ post.caption }}</p>
                     </div>
                 </article>
+                {% empty %}
+                <p class="empty-hint">ยังไม่มีโพสต์ในคอมมูนิตี้</p>
                 {% endfor %}
             </div>
         </section>
@@ -86,6 +98,7 @@
 (function () {
     const input = document.getElementById("upload-input");
     const preview = document.getElementById("upload-preview");
+    const form = document.getElementById("community-form");
     const btn = document.getElementById("upload-btn");
 
     input.addEventListener("change", function () {
@@ -96,8 +109,10 @@
         preview.classList.add("has-image");
     });
 
-    btn.addEventListener("click", function () {
-        alert("ยังเป็น Mockup — ยังไม่ได้บันทึกลงระบบจริง");
+    form.addEventListener("submit", function () {
+        if (!input.files.length) return;
+        btn.disabled = true;
+        btn.innerHTML = '<i class="ti ti-loader-2 spin"></i> กำลังอัปโหลด...';
     });
 })();
 </script>

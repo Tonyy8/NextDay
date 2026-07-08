@@ -1,16 +1,35 @@
 <!DOCTYPE html>
-<html lang="th">
+<html lang="{{ ui_lang|default:'th' }}" class="font-{{ font_size|default:'md' }} lang-{{ ui_lang|default:'th' }}"
+      data-font-size="{{ font_size|default:'md' }}" data-ui-lang="{{ ui_lang|default:'th' }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}NEXTDAY{% endblock %}</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+    (function () {
+        var fs = localStorage.getItem("nd_font_size");
+        var lg = localStorage.getItem("nd_ui_lang");
+        var html = document.documentElement;
+        if (fs) {
+            html.classList.remove("font-sm", "font-md", "font-lg");
+            html.classList.add("font-" + fs);
+            html.dataset.fontSize = fs;
+        }
+        if (lg) {
+            html.lang = lg;
+            html.classList.remove("lang-th", "lang-en");
+            html.classList.add("lang-" + lg);
+            html.dataset.uiLang = lg;
+        }
+    })();
+    </script>
+    <link rel="stylesheet" href="/static/css/fonts.css?v=4">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
-    <link rel="stylesheet" href="/static/css/style.css?v=3">
-    <link rel="stylesheet" href="/static/css/wardrobe.css?v=19">
+    <link rel="stylesheet" href="/static/css/style.css?v=5">
+    <link rel="stylesheet" href="/static/css/wardrobe.css?v=44">
+    {% block head_extra %}{% endblock %}
 </head>
-<body class="app-body">
+<body class="app-body" data-settings-url="{% url 'wardrobe:settings' %}">
     <div class="app-shell">
         <input type="checkbox" id="side-toggle" class="side-toggle-input" hidden>
         <label for="side-toggle" class="side-scrim"></label>
@@ -22,36 +41,39 @@
             </a>
 
             <a href="{% url 'wardrobe:upload' %}" class="side-upload">
-                <i class="ti ti-camera-plus"></i> อัปโหลดเสื้อผ้า
+                <i class="ti ti-camera-plus"></i> <span data-i18n="nav.upload">อัปโหลดเสื้อผ้า</span>
             </a>
 
             <nav class="side-nav">
-                <span class="side-group">เมนูหลัก</span>
+                <span class="side-group" data-i18n="nav.main">เมนูหลัก</span>
                 <a href="{% url 'wardrobe:dashboard' %}" class="side-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
-                    <i class="ti ti-layout-dashboard"></i> หน้าหลัก
+                    <i class="ti ti-layout-dashboard"></i> <span data-i18n="nav.dashboard">หน้าหลัก</span>
                 </a>
                 <a href="{% url 'wardrobe:wardrobe' %}" class="side-link {% if request.resolver_match.url_name == 'wardrobe' or request.resolver_match.url_name == 'edit' %}active{% endif %}">
-                    <i class="ti ti-hanger"></i> ตู้เสื้อผ้า
+                    <i class="ti ti-hanger"></i> <span data-i18n="nav.wardrobe">ตู้เสื้อผ้า</span>
                 </a>
                 <a href="{% url 'wardrobe:outfit' %}" class="side-link {% if request.resolver_match.url_name == 'outfit' %}active{% endif %}">
-                    <i class="ti ti-sparkles"></i> แนะนำชุด
+                    <i class="ti ti-sparkles"></i> <span data-i18n="nav.outfit">แนะนำชุด</span>
                 </a>
                 <a href="{% url 'wardrobe:manual_outfit' %}" class="side-link {% if request.resolver_match.url_name == 'manual_outfit' %}active{% endif %}">
-                    <i class="ti ti-wand"></i> จัดชุดเอง
+                    <i class="ti ti-wand"></i> <span data-i18n="nav.manual_outfit">จัดชุดเอง</span>
                 </a>
                 <a href="{% url 'wardrobe:favorites' %}" class="side-link {% if request.resolver_match.url_name == 'favorites' %}active{% endif %}">
-                    <i class="ti ti-heart"></i> ประวัติชุดโปรด
+                    <i class="ti ti-heart"></i> <span data-i18n="nav.favorites">ประวัติชุดโปรด</span>
                 </a>
                 <a href="{% url 'wardrobe:community' %}" class="side-link {% if request.resolver_match.url_name == 'community' %}active{% endif %}">
-                    <i class="ti ti-users"></i> คอมมูนิตี้
+                    <i class="ti ti-users"></i> <span data-i18n="nav.community">คอมมูนิตี้</span>
                 </a>
 
-                <span class="side-group">บัญชี</span>
+                <span class="side-group" data-i18n="nav.account">บัญชี</span>
                 <a href="{% url 'wardrobe:profile' %}" class="side-link {% if request.resolver_match.url_name == 'profile' %}active{% endif %}">
-                    <i class="ti ti-user"></i> โปรไฟล์
+                    <i class="ti ti-user"></i> <span data-i18n="nav.profile">โปรไฟล์</span>
+                </a>
+                <a href="{% url 'wardrobe:settings' %}" class="side-link {% if request.resolver_match.url_name == 'settings' %}active{% endif %}">
+                    <i class="ti ti-settings"></i> <span data-i18n="nav.settings">ตั้งค่า</span>
                 </a>
                 <a href="{% url 'wardrobe:feedback' %}" class="side-link {% if request.resolver_match.url_name == 'feedback' %}active{% endif %}">
-                    <i class="ti ti-message-report"></i> แจ้งปัญหา/เสนอแนะ
+                    <i class="ti ti-message-report"></i> <span data-i18n="nav.feedback">แจ้งปัญหา/เสนอแนะ</span>
                 </a>
             </nav>
 
@@ -61,22 +83,23 @@
                     <div class="avatar">{{ user.username|slice:":1"|upper }}</div>
                     <div class="side-user-info">
                         <strong>{{ user.username }}</strong>
-                        <span>สมาชิก NEXTDAY</span>
+                        <span data-i18n="nav.member">สมาชิก NEXTDAY</span>
                     </div>
                 </div>
-                <a href="{% url 'accounts:logout' %}" class="side-logout" title="ออกจากระบบ"><i class="ti ti-logout"></i></a>
+                <a href="{% url 'accounts:logout' %}" class="side-logout" data-i18n-title="nav.logout" title="ออกจากระบบ"><i class="ti ti-logout"></i></a>
             </div>
             {% endif %}
         </aside>
 
         <div class="main-area">
             <header class="topbar">
-                <label for="side-toggle" class="topbar-menu" aria-label="เมนู"><i class="ti ti-menu-2"></i></label>
+                <label for="side-toggle" class="topbar-menu" data-i18n-aria="nav.menu" aria-label="เมนู"><i class="ti ti-menu-2"></i></label>
                 <div class="topbar-title">{% block page_title %}{% endblock %}</div>
                 <div class="topbar-actions">
-                    <a href="{% url 'wardrobe:upload' %}" class="topbar-btn" title="อัปโหลด"><i class="ti ti-camera-plus"></i></a>
+                    <a href="{% url 'wardrobe:settings' %}" class="topbar-btn" data-i18n-title="nav.settings" title="ตั้งค่า"><i class="ti ti-settings"></i></a>
+                    <a href="{% url 'wardrobe:upload' %}" class="topbar-btn" data-i18n-title="nav.upload_btn" title="อัปโหลด"><i class="ti ti-camera-plus"></i></a>
                     {% if user.is_authenticated %}
-                    <a href="{% url 'wardrobe:profile' %}" class="avatar avatar-sm" title="โปรไฟล์">{{ user.username|slice:":1"|upper }}</a>
+                    <a href="{% url 'wardrobe:profile' %}" class="avatar avatar-sm" data-i18n-title="nav.profile_btn" title="โปรไฟล์">{{ user.username|slice:":1"|upper }}</a>
                     {% endif %}
                 </div>
             </header>
@@ -91,5 +114,8 @@
             </main>
         </div>
     </div>
+    <script src="/static/js/i18n.js?v=2"></script>
+    <script src="/static/js/settings.js?v=1"></script>
+    {% block scripts_extra %}{% endblock %}
 </body>
 </html>

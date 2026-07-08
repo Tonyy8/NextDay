@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}{% if ui_lang == 'en' %}Settings{% else %}ตั้งค่า{% endif %} - NEXTDAY{% endblock %}
+{% block page_title %}<span data-i18n="page.settings">ตั้งค่า</span>{% endblock %}
+
+{% block content %}
+<div class="sub-page settings-page">
+    <div class="sub-hero row-between">
+        <div>
+            <h1 data-i18n="settings.title">ตั้งค่า</h1>
+            <p data-i18n="settings.subtitle">ปรับขนาดตัวอักษรและภาษาของแอป</p>
+        </div>
+        <span id="settings-saved" class="settings-saved" hidden data-i18n="settings.saved">บันทึกแล้ว</span>
+    </div>
+
+    <div class="settings-grid">
+        <section class="card settings-card">
+            <h2 class="settings-card-title" data-i18n="settings.font_section">ขนาดตัวอักษร</h2>
+            <p class="settings-hint" data-i18n="settings.font_hint">เปลี่ยนแล้วมีผลทันทีทั้งแอป</p>
+            <div class="settings-options" role="group" aria-label="Font size">
+                <button type="button" class="settings-option" data-font-option="sm"
+                    {% if font_size == "sm" %}data-active{% endif %}>
+                    <span class="settings-option-label" data-i18n="settings.font_sm">เล็ก</span>
+                    <span class="settings-option-sample sample-sm">Aa ก</span>
+                </button>
+                <button type="button" class="settings-option" data-font-option="md"
+                    {% if font_size == "md" %}data-active{% endif %}>
+                    <span class="settings-option-label" data-i18n="settings.font_md">กลาง</span>
+                    <span class="settings-option-sample sample-md">Aa ก</span>
+                </button>
+                <button type="button" class="settings-option" data-font-option="lg"
+                    {% if font_size == "lg" %}data-active{% endif %}>
+                    <span class="settings-option-label" data-i18n="settings.font_lg">ใหญ่</span>
+                    <span class="settings-option-sample sample-lg">Aa ก</span>
+                </button>
+            </div>
+        </section>
+
+        <section class="card settings-card">
+            <h2 class="settings-card-title" data-i18n="settings.lang_section">ภาษา</h2>
+            <p class="settings-hint" data-i18n="settings.lang_hint">สลับภาษาเมนูและข้อความหลัก</p>
+            <div class="settings-options settings-options-2" role="group" aria-label="Language">
+                <button type="button" class="settings-option" data-lang-option="th">
+                    <span class="settings-option-label" data-i18n="settings.lang_th">ไทย</span>
+                    <span class="settings-option-sub">ภาษาไทย</span>
+                </button>
+                <button type="button" class="settings-option" data-lang-option="en">
+                    <span class="settings-option-label" data-i18n="settings.lang_en">English</span>
+                    <span class="settings-option-sub">English UI</span>
+                </button>
+            </div>
+        </section>
+
+        <section class="card settings-card settings-preview-card">
+            <h2 class="settings-card-title" data-i18n="settings.preview">ตัวอย่างข้อความ</h2>
+            <p class="settings-preview-text" data-i18n="settings.preview_text">
+                ยินดีต้อนรับสู่ NEXTDAY — จัดตู้เสื้อผ้าและแต่งชุดอย่างชาญฉลาด
+            </p>
+        </section>
+    </div>
+</div>
+{% endblock %}

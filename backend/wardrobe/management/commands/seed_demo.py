@@ -34,7 +34,7 @@ DESTINATIONS = [
         "slug": "party",
         "formality_level": 5,
         "icon": "🎉",
-        "allowed_categories": ["shirt", "blouse", "pants", "skirt", "jacket"],
+        "allowed_categories": ["shirt", "blouse", "dress", "jumpsuit", "pants", "skirt", "jacket"],
         "description": "งานสังสรรค์ กึ่งทางการ",
     },
     {
@@ -42,8 +42,8 @@ DESTINATIONS = [
         "slug": "wedding",
         "formality_level": 6,
         "icon": "💒",
-        "allowed_categories": ["shirt", "blouse", "pants", "skirt", "jacket"],
-        "description": "ทางการ สุภาพเรียบร้อย",
+        "allowed_categories": ["shirt", "blouse", "dress", "jumpsuit", "suit", "pants", "skirt", "jacket"],
+        "description": "ทางการ — เดรส จั๊มสูท สูท (เลี่ยงชุดดำ/ขาวล้วน)",
     },
     {
         "name": "ออกกำลังกาย",

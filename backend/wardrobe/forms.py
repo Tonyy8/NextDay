@@ -1,6 +1,7 @@
 from django import forms
 
-from database.models import FABRIC_THICKNESS_CHOICES, GARMENT_TYPES, ClothingItem
+from database.garment_catalog import grouped_choices
+from database.models import FABRIC_THICKNESS_CHOICES, ClothingItem
 
 WARDROBE_COLORS = [
     ("#ffffff", "ขาว"),
@@ -60,7 +61,7 @@ def color_label_for_hex(hex_code: str) -> str:
 
 class ItemEditForm(forms.Form):
     garment_type = forms.ChoiceField(
-        choices=GARMENT_TYPES,
+        choices=grouped_choices(),
         label="ประเภทเสื้อผ้า",
         widget=forms.Select(attrs={"class": "form-input"}),
     )
@@ -98,7 +99,7 @@ class WardrobeSearchForm(forms.Form):
     garment_type = forms.ChoiceField(
         required=False,
         label="ประเภท",
-        choices=[("", "ทั้งหมด")] + GARMENT_TYPES,
+        choices=grouped_choices(include_all=True),
         widget=forms.Select(attrs={"class": "form-input"}),
     )
 
