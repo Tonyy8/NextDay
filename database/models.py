@@ -74,8 +74,23 @@ class AISettings(models.Model):
 
     @classmethod
     def get(cls):
-        obj, _ = cls.objects.get_or_create(pk=1)
-        return obj
+        try:
+            obj, _ = cls.objects.get_or_create(pk=1)
+            return obj
+        except Exception as exc:
+            from django.conf import settings
+            from django.db.utils import OperationalError, ProgrammingError
+
+            if isinstance(exc, (OperationalError, ProgrammingError)) and getattr(
+                settings, "MOCK_MODE", False
+            ):
+                return cls(
+                    pk=1,
+                    confidence_threshold=0.6,
+                    lab_min_delta=12.0,
+                    lab_max_delta=45.0,
+                )
+            raise
 
     def __str__(self):
         return "ตั้งค่าระบบ AI"

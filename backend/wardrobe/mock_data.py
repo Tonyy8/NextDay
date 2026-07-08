@@ -550,8 +550,6 @@ def _get_default_favorites() -> list:
     return _FAVORITES_CACHE
 
 
-FAVORITES = _get_default_favorites()
-
 # โพสต์คอมมูนิตี้ — รูปชุดแฟชั่นเดิม (bundled ที่ static/mock/community)
 _COMMUNITY_STATIC = Path(__file__).resolve().parents[2] / "frontend" / "static" / "mock" / "community"
 
