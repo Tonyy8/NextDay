@@ -898,6 +898,11 @@ select.form-input { cursor: pointer; }
 
 .outfit-piece:hover .piece-edit { opacity: 1; }
 
+@media (hover: none) {
+    .piece-edit { opacity: 1; }
+    .outfit-piece { cursor: pointer; }
+}
+
 .piece-label { font-size: 10px; color: #999; margin: 6px 8px 0; text-transform: uppercase; letter-spacing: 0.04em; }
 .piece-name { font-size: 13px; font-weight: 600; color: var(--wine); margin: 2px 8px; }
 .piece-color { font-size: 12px; color: #555; margin: 0 8px 8px; display: flex; align-items: center; gap: 4px; }

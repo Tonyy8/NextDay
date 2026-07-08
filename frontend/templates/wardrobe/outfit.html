@@ -124,7 +124,7 @@
         {% endfor %}
     </div>
 
-    {% if swap_alternatives %}
+    {% if swap_mode %}
     <div class="swap-panel">
         <div class="swap-panel-head">
             <h3>สลับ{% if swap_is_full_outfit %}ชุดเซ็ต{% elif swap_piece == 'top' %}ท่อนบน{% else %}ท่อนล่าง{% endif %}</h3>
@@ -135,6 +135,7 @@
             <span class="color-dot" style="background:{{ swap_current.primary_color_hex }}"></span>
             {{ swap_current.get_garment_type_display }} สี{{ swap_current.color_name_th }}
         </div>
+        {% if swap_alternatives %}
         <div class="swap-options">
             {% for alt in swap_alternatives %}
             <a href="{{ alt.url }}" class="swap-option">
@@ -146,6 +147,9 @@
             </a>
             {% endfor %}
         </div>
+        {% else %}
+        <p class="empty-hint">ไม่มีชิ้นทดแทนในตู้เสื้อผ้าสำหรับสถานที่นี้ — <a href="{% url 'wardrobe:upload' %}">อัปโหลดเพิ่ม</a></p>
+        {% endif %}
     </div>
     {% endif %}
     {% endif %}

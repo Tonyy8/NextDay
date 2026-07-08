@@ -351,7 +351,7 @@ def outfit_builder(request):
             **_outfit_matrix_context(destination),
         })
 
-        if swap_slot is not None and swap_piece in ("top", "bottom"):
+        if swap_slot not in (None, "") and swap_piece in ("top", "bottom"):
             slot_idx = int(swap_slot)
             if slot_idx < len(outfits):
                 current = outfits[slot_idx]
@@ -362,6 +362,7 @@ def outfit_builder(request):
                 else:
                     ref_item = current.bottom
                 alts = builder.part_alternatives(ref_item, user_items, destination)
+                context["swap_mode"] = True
                 context["swap_alternatives"] = [
                     {
                         "item": alt,

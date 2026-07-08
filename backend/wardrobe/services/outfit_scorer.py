@@ -155,9 +155,66 @@ class OutfitScoringEngine:
                 break
 
         if slot_overrides:
-            self._apply_overrides(results, slot_overrides, tops, bottoms, full_pieces, matrix_a)
+            self._apply_overrides(
+                results, slot_overrides, tops, bottoms, full_pieces, matrix_a, user_items
+            )
 
         return results
+
+    @staticmethod
+    def _lookup_matrix_b(pk, user_items, top_map, bottom_map, full_map):
+        if pk in full_map:
+            return full_map[pk]
+        if pk in top_map:
+            return top_map[pk]
+        if pk in bottom_map:
+            return bottom_map[pk]
+        for item in user_items:
+            if item.pk == pk:
+                return build_matrix_b(item)
+        return None
+
+    def _apply_overrides(self, results, overrides, tops, bottoms, full_pieces, matrix_a, user_items):
+        top_map = {b.pk: b for b in tops}
+        bottom_map = {b.pk: b for b in bottoms}
+        full_map = {b.pk: b for b in full_pieces}
+        for idx, slots in overrides.items():
+            if idx >= len(results):
+                continue
+            top_pk = slots.get("top")
+            bottom_pk = slots.get("bottom")
+
+            if top_pk and not bottom_pk:
+                top_b = self._lookup_matrix_b(top_pk, user_items, top_map, bottom_map, full_map)
+                if top_b and is_full_outfit(top_b.garment_type):
+                    rescored = self._score_full_outfit(top_b, matrix_a)
+                    rescored.rank = results[idx].rank
+                    results[idx] = rescored
+                    continue
+
+            top_b = (
+                self._lookup_matrix_b(top_pk, user_items, top_map, bottom_map, full_map)
+                if top_pk else None
+            )
+            bottom_b = (
+                self._lookup_matrix_b(bottom_pk, user_items, top_map, bottom_map, full_map)
+                if bottom_pk else None
+            )
+
+            if top_b is None:
+                top_b = build_matrix_b(results[idx].top)
+            if bottom_b is None and not results[idx].is_full_outfit:
+                bottom_b = build_matrix_b(results[idx].bottom)
+
+            if top_b and is_full_outfit(top_b.garment_type) and not bottom_b:
+                rescored = self._score_full_outfit(top_b, matrix_a)
+            elif top_b and bottom_b:
+                rescored = self._score_pair(top_b, bottom_b, matrix_a)
+            else:
+                continue
+
+            rescored.rank = results[idx].rank
+            results[idx] = rescored
 
     def _score_full_outfit(self, piece: MatrixB, matrix_a: MatrixA) -> OutfitSuggestion:
         corr = score_correctness(piece, matrix_a)
@@ -219,43 +276,3 @@ class OutfitScoringEngine:
             color_score=round(color, 1),
             is_full_outfit=False,
         )
-
-    def _apply_overrides(self, results, overrides, tops, bottoms, full_pieces, matrix_a):
-        top_map = {b.pk: b for b in tops}
-        bottom_map = {b.pk: b for b in bottoms}
-        full_map = {b.pk: b for b in full_pieces}
-        for idx, slots in overrides.items():
-            if idx >= len(results):
-                continue
-            top_pk = slots.get("top")
-            bottom_pk = slots.get("bottom")
-
-            if top_pk in full_map and not bottom_pk:
-                rescored = self._score_full_outfit(full_map[top_pk], matrix_a)
-                rescored.rank = results[idx].rank
-                results[idx] = rescored
-                continue
-
-            top_b = None
-            bottom_b = None
-            if top_pk in top_map:
-                top_b = top_map[top_pk]
-            elif top_pk in full_map:
-                top_b = full_map[top_pk]
-            if bottom_pk in bottom_map:
-                bottom_b = bottom_map[bottom_pk]
-
-            if top_b is None:
-                top_b = build_matrix_b(results[idx].top)
-            if bottom_b is None and not results[idx].is_full_outfit:
-                bottom_b = build_matrix_b(results[idx].bottom)
-
-            if results[idx].is_full_outfit and not bottom_b:
-                rescored = self._score_full_outfit(top_b, matrix_a)
-            elif bottom_b:
-                rescored = self._score_pair(top_b, bottom_b, matrix_a)
-            else:
-                continue
-
-            rescored.rank = results[idx].rank
-            results[idx] = rescored

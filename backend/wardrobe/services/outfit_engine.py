@@ -125,7 +125,14 @@ class OutfitBuilder:
         ]
 
     def part_alternatives(self, item: ClothingItem, user_items, destination: Destination) -> list[ClothingItem]:
-        eligible = self.filter.filter_for_destination(user_items, destination)
+        from .destination_profiles import build_matrix_a
+        from .outfit_scorer import build_matrix_b, passes_hard_filter
+
+        matrix_a = build_matrix_a(destination)
+        eligible = [
+            i for i in user_items
+            if passes_hard_filter(build_matrix_b(i), matrix_a)
+        ]
         if is_full_outfit(item.garment_type):
             pool = self.filter.full_outfits(eligible)
         elif item.part == "top" or item.garment_type in TOP_TYPES:
