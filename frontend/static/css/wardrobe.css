@@ -1349,12 +1349,18 @@ select.form-input { cursor: pointer; }
     padding: 0.75rem;
 }
 
-.side-link-guest::after {
-    content: "\ea22";
-    font-family: "tabler-icons";
+.side-guest-note {
+    margin: 0.5rem 0.75rem 0;
     font-size: 12px;
-    margin-left: auto;
-    opacity: 0.45;
+    line-height: 1.45;
+    color: rgba(255, 255, 255, 0.55);
+}
+
+.topbar-btn-text {
+    width: auto;
+    padding: 0 12px;
+    font-size: 13px;
+    font-weight: 600;
 }
 
 .community-upload {

@@ -60,6 +60,9 @@ class MockLoginGateMiddleware:
             if path.startswith("/app/") and not request.user.is_authenticated:
                 from django.shortcuts import redirect
                 from django.urls import reverse
+
+                if request.method == "GET":
+                    return redirect(reverse("wardrobe:community"))
                 from urllib.parse import urlencode
 
                 login_url = reverse("accounts:login")
