@@ -1342,6 +1342,21 @@ select.form-input { cursor: pointer; }
 .guest-cta-text span { color: var(--text-muted, #5a7a9a); font-size: 0.875rem; }
 .guest-cta-actions { display: flex; gap: 0.6rem; flex-shrink: 0; }
 
+.side-foot-guest {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 0.75rem;
+}
+
+.side-link-guest::after {
+    content: "\ea22";
+    font-family: "tabler-icons";
+    font-size: 12px;
+    margin-left: auto;
+    opacity: 0.45;
+}
+
 .community-upload {
     position: sticky;
     top: 1rem;

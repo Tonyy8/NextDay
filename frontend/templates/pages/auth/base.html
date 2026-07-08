@@ -60,8 +60,7 @@
                 {% block auth_content %}{% endblock %}
 
                 <div class="auth-guest-link">
-                    {% url 'wardrobe:community' as community_path %}
-                    <a href="{% url 'accounts:login' %}?next={{ community_path|urlencode }}">ดูคอมมูนิตี้ — เข้าสู่ระบบก่อน &rarr;</a>
+                    <a href="{% url 'wardrobe:community' %}">ดูคอมมูนิตี้แบบผู้เยี่ยมชม &rarr;</a>
                 </div>
             </div>
         </main>

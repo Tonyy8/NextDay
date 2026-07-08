@@ -41,9 +41,10 @@ class MockAuthMiddleware:
 
 
 class MockLoginGateMiddleware:
-    """In MOCK_MODE, /app/* requires mock login (session) before access."""
+    """In MOCK_MODE, /app/* requires mock login — except community browse (GET)."""
 
     _PUBLIC_PREFIXES = ("/login/", "/register/", "/logout/", "/static/", "/health/", "/admin/")
+    _GUEST_GET_PREFIXES = ("/app/community",)
 
     def __init__(self, get_response):
         self.get_response = get_response
@@ -51,6 +52,11 @@ class MockLoginGateMiddleware:
     def __call__(self, request):
         if getattr(settings, "MOCK_MODE", False):
             path = request.path
+            if request.method == "GET" and any(
+                path == prefix or path.startswith(prefix + "/")
+                for prefix in self._GUEST_GET_PREFIXES
+            ):
+                return self.get_response(request)
             if path.startswith("/app/") and not request.user.is_authenticated:
                 from django.shortcuts import redirect
                 from django.urls import reverse
@@ -58,6 +64,4 @@ class MockLoginGateMiddleware:
 
                 login_url = reverse("accounts:login")
                 return redirect(f"{login_url}?{urlencode({'next': path})}")
-            if path.startswith("/app/") and any(path.startswith(p) for p in self._PUBLIC_PREFIXES):
-                pass
         return self.get_response(request)

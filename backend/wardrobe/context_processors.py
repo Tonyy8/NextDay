@@ -7,7 +7,8 @@ def site_context(request):
 
     return {
         "mock_mode": getattr(settings, "MOCK_MODE", False),
-        "mock_guest": getattr(settings, "MOCK_MODE", False) and request.session.get("mock_logged_out"),
+        "mock_guest": getattr(settings, "MOCK_MODE", False)
+        and request.session.get("mock_logged_out", True),
         "font_size": get_font_size(request),
         "ui_lang": get_ui_lang(request),
     }

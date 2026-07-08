@@ -493,9 +493,15 @@ def delete_favorite(request, pk):
     return redirect("wardrobe:favorites")
 
 
-@login_required
 @require_http_methods(["GET", "POST"])
 def community(request):
+    guest_browse = settings.MOCK_MODE and request.method == "GET"
+    if not guest_browse and not request.user.is_authenticated:
+        from django.contrib.auth.views import redirect_to_login
+        from django.urls import reverse
+
+        return redirect_to_login(request.get_full_path(), login_url=reverse("accounts:login"))
+
     if settings.MOCK_MODE:
         if request.method == "POST":
             action = request.POST.get("action")

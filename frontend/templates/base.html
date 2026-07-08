@@ -26,7 +26,7 @@
     <link rel="stylesheet" href="/static/css/fonts.css?v=4">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
     <link rel="stylesheet" href="/static/css/style.css?v=5">
-    <link rel="stylesheet" href="/static/css/wardrobe.css?v=44">
+    <link rel="stylesheet" href="/static/css/wardrobe.css?v=45">
     {% block head_extra %}{% endblock %}
 </head>
 <body class="app-body" data-settings-url="{% url 'wardrobe:settings' %}">
@@ -35,44 +35,55 @@
         <label for="side-toggle" class="side-scrim"></label>
 
         <aside class="sidebar">
-            <a href="{% url 'wardrobe:dashboard' %}" class="side-logo">
+            {% url 'wardrobe:dashboard' as nav_dashboard %}
+            {% url 'wardrobe:wardrobe' as nav_wardrobe %}
+            {% url 'wardrobe:outfit' as nav_outfit %}
+            {% url 'wardrobe:manual_outfit' as nav_manual %}
+            {% url 'wardrobe:favorites' as nav_favorites %}
+            {% url 'wardrobe:community' as nav_community %}
+            {% url 'wardrobe:profile' as nav_profile %}
+            {% url 'wardrobe:settings' as nav_settings %}
+            {% url 'wardrobe:feedback' as nav_feedback %}
+            {% url 'wardrobe:upload' as nav_upload %}
+
+            <a href="{% if user.is_authenticated %}{{ nav_dashboard }}{% else %}{{ nav_community }}{% endif %}" class="side-logo">
                 <span class="side-logo-mark">N</span>
                 <span class="side-logo-text">NEXTDAY</span>
             </a>
 
-            <a href="{% url 'wardrobe:upload' %}" class="side-upload">
+            <a href="{% if user.is_authenticated %}{{ nav_upload }}{% else %}{% url 'accounts:login' %}?next={{ nav_upload|urlencode }}{% endif %}" class="side-upload{% if not user.is_authenticated %} side-link-guest{% endif %}">
                 <i class="ti ti-camera-plus"></i> <span data-i18n="nav.upload">อัปโหลดเสื้อผ้า</span>
             </a>
 
             <nav class="side-nav">
                 <span class="side-group" data-i18n="nav.main">เมนูหลัก</span>
-                <a href="{% url 'wardrobe:dashboard' %}" class="side-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+                <a href="{% if user.is_authenticated %}{{ nav_dashboard }}{% else %}{% url 'accounts:login' %}?next={{ nav_dashboard|urlencode }}{% endif %}" class="side-link{% if not user.is_authenticated %} side-link-guest{% endif %} {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
                     <i class="ti ti-layout-dashboard"></i> <span data-i18n="nav.dashboard">หน้าหลัก</span>
                 </a>
-                <a href="{% url 'wardrobe:wardrobe' %}" class="side-link {% if request.resolver_match.url_name == 'wardrobe' or request.resolver_match.url_name == 'edit' %}active{% endif %}">
+                <a href="{% if user.is_authenticated %}{{ nav_wardrobe }}{% else %}{% url 'accounts:login' %}?next={{ nav_wardrobe|urlencode }}{% endif %}" class="side-link{% if not user.is_authenticated %} side-link-guest{% endif %} {% if request.resolver_match.url_name == 'wardrobe' or request.resolver_match.url_name == 'edit' %}active{% endif %}">
                     <i class="ti ti-hanger"></i> <span data-i18n="nav.wardrobe">ตู้เสื้อผ้า</span>
                 </a>
-                <a href="{% url 'wardrobe:outfit' %}" class="side-link {% if request.resolver_match.url_name == 'outfit' %}active{% endif %}">
+                <a href="{% if user.is_authenticated %}{{ nav_outfit }}{% else %}{% url 'accounts:login' %}?next={{ nav_outfit|urlencode }}{% endif %}" class="side-link{% if not user.is_authenticated %} side-link-guest{% endif %} {% if request.resolver_match.url_name == 'outfit' %}active{% endif %}">
                     <i class="ti ti-sparkles"></i> <span data-i18n="nav.outfit">แนะนำชุด</span>
                 </a>
-                <a href="{% url 'wardrobe:manual_outfit' %}" class="side-link {% if request.resolver_match.url_name == 'manual_outfit' %}active{% endif %}">
+                <a href="{% if user.is_authenticated %}{{ nav_manual }}{% else %}{% url 'accounts:login' %}?next={{ nav_manual|urlencode }}{% endif %}" class="side-link{% if not user.is_authenticated %} side-link-guest{% endif %} {% if request.resolver_match.url_name == 'manual_outfit' %}active{% endif %}">
                     <i class="ti ti-wand"></i> <span data-i18n="nav.manual_outfit">จัดชุดเอง</span>
                 </a>
-                <a href="{% url 'wardrobe:favorites' %}" class="side-link {% if request.resolver_match.url_name == 'favorites' %}active{% endif %}">
+                <a href="{% if user.is_authenticated %}{{ nav_favorites }}{% else %}{% url 'accounts:login' %}?next={{ nav_favorites|urlencode }}{% endif %}" class="side-link{% if not user.is_authenticated %} side-link-guest{% endif %} {% if request.resolver_match.url_name == 'favorites' %}active{% endif %}">
                     <i class="ti ti-heart"></i> <span data-i18n="nav.favorites">ประวัติชุดโปรด</span>
                 </a>
-                <a href="{% url 'wardrobe:community' %}" class="side-link {% if request.resolver_match.url_name == 'community' %}active{% endif %}">
+                <a href="{{ nav_community }}" class="side-link {% if request.resolver_match.url_name == 'community' %}active{% endif %}">
                     <i class="ti ti-users"></i> <span data-i18n="nav.community">คอมมูนิตี้</span>
                 </a>
 
                 <span class="side-group" data-i18n="nav.account">บัญชี</span>
-                <a href="{% url 'wardrobe:profile' %}" class="side-link {% if request.resolver_match.url_name == 'profile' %}active{% endif %}">
+                <a href="{% if user.is_authenticated %}{{ nav_profile }}{% else %}{% url 'accounts:login' %}?next={{ nav_profile|urlencode }}{% endif %}" class="side-link{% if not user.is_authenticated %} side-link-guest{% endif %} {% if request.resolver_match.url_name == 'profile' %}active{% endif %}">
                     <i class="ti ti-user"></i> <span data-i18n="nav.profile">โปรไฟล์</span>
                 </a>
-                <a href="{% url 'wardrobe:settings' %}" class="side-link {% if request.resolver_match.url_name == 'settings' %}active{% endif %}">
+                <a href="{% if user.is_authenticated %}{{ nav_settings }}{% else %}{% url 'accounts:login' %}?next={{ nav_settings|urlencode }}{% endif %}" class="side-link{% if not user.is_authenticated %} side-link-guest{% endif %} {% if request.resolver_match.url_name == 'settings' %}active{% endif %}">
                     <i class="ti ti-settings"></i> <span data-i18n="nav.settings">ตั้งค่า</span>
                 </a>
-                <a href="{% url 'wardrobe:feedback' %}" class="side-link {% if request.resolver_match.url_name == 'feedback' %}active{% endif %}">
+                <a href="{% if user.is_authenticated %}{{ nav_feedback }}{% else %}{% url 'accounts:login' %}?next={{ nav_feedback|urlencode }}{% endif %}" class="side-link{% if not user.is_authenticated %} side-link-guest{% endif %} {% if request.resolver_match.url_name == 'feedback' %}active{% endif %}">
                     <i class="ti ti-message-report"></i> <span data-i18n="nav.feedback">แจ้งปัญหา/เสนอแนะ</span>
                 </a>
             </nav>
@@ -88,6 +99,11 @@
                 </div>
                 <a href="{% url 'accounts:logout' %}" class="side-logout" data-i18n-title="nav.logout" title="ออกจากระบบ"><i class="ti ti-logout"></i></a>
             </div>
+            {% else %}
+            <div class="side-foot side-foot-guest">
+                <a href="{% url 'accounts:register' %}" class="btn-primary btn-block">สมัครสมาชิก</a>
+                <a href="{% url 'accounts:login' %}" class="btn-outline btn-block">เข้าสู่ระบบ</a>
+            </div>
             {% endif %}
         </aside>
 
@@ -96,8 +112,8 @@
                 <label for="side-toggle" class="topbar-menu" data-i18n-aria="nav.menu" aria-label="เมนู"><i class="ti ti-menu-2"></i></label>
                 <div class="topbar-title">{% block page_title %}{% endblock %}</div>
                 <div class="topbar-actions">
-                    <a href="{% url 'wardrobe:settings' %}" class="topbar-btn" data-i18n-title="nav.settings" title="ตั้งค่า"><i class="ti ti-settings"></i></a>
-                    <a href="{% url 'wardrobe:upload' %}" class="topbar-btn" data-i18n-title="nav.upload_btn" title="อัปโหลด"><i class="ti ti-camera-plus"></i></a>
+                    <a href="{% if user.is_authenticated %}{{ nav_settings }}{% else %}{% url 'accounts:login' %}?next={{ nav_settings|urlencode }}{% endif %}" class="topbar-btn" data-i18n-title="nav.settings" title="ตั้งค่า"><i class="ti ti-settings"></i></a>
+                    <a href="{% if user.is_authenticated %}{{ nav_upload }}{% else %}{% url 'accounts:login' %}?next={{ nav_upload|urlencode }}{% endif %}" class="topbar-btn" data-i18n-title="nav.upload_btn" title="อัปโหลด"><i class="ti ti-camera-plus"></i></a>
                     {% if user.is_authenticated %}
                     <a href="{% url 'wardrobe:profile' %}" class="avatar avatar-sm" data-i18n-title="nav.profile_btn" title="โปรไฟล์">{{ user.username|slice:":1"|upper }}</a>
                     {% endif %}
