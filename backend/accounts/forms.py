@@ -40,6 +40,45 @@ class LoginForm(forms.Form):
         return cleaned
 
 
+class ForgotPasswordForm(forms.Form):
+    email = forms.EmailField(
+        label="อีเมล",
+        widget=forms.EmailInput(attrs={
+            "class": "auth-input",
+            "placeholder": "name@example.com",
+            "autocomplete": "email",
+        }),
+    )
+
+
+class ResetPasswordForm(forms.Form):
+    password = forms.CharField(
+        label="รหัสผ่านใหม่",
+        min_length=8,
+        widget=forms.PasswordInput(attrs={
+            "class": "auth-input",
+            "placeholder": "อย่างน้อย 8 ตัวอักษร",
+            "autocomplete": "new-password",
+        }),
+    )
+    password_confirm = forms.CharField(
+        label="ยืนยันรหัสผ่านใหม่",
+        widget=forms.PasswordInput(attrs={
+            "class": "auth-input",
+            "placeholder": "กรอกรหัสผ่านอีกครั้ง",
+            "autocomplete": "new-password",
+        }),
+    )
+
+    def clean(self):
+        cleaned = super().clean()
+        password = cleaned.get("password")
+        confirm = cleaned.get("password_confirm")
+        if password and confirm and password != confirm:
+            self.add_error("password_confirm", "รหัสผ่านไม่ตรงกัน")
+        return cleaned
+
+
 class RegisterForm(forms.Form):
     email = forms.EmailField(
         label="อีเมล",

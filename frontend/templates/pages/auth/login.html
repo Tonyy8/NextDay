@@ -29,7 +29,7 @@
     <div class="form-group">
         <div class="label-row">
             <label for="id_password">{{ form.password.label }}</label>
-            <a href="#" class="forgot-link" onclick="alert('ฟีเจอร์นี้จะเปิดใช้งานเร็วๆ นี้'); return false;">ลืมรหัสผ่าน?</a>
+            <a href="{% url 'accounts:forgot_password' %}" class="forgot-link">ลืมรหัสผ่าน?</a>
         </div>
         {{ form.password }}
         {% if form.password.errors %}

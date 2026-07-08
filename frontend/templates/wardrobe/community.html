@@ -11,14 +11,10 @@
     </div>
 
     {% if not user.is_authenticated %}
-    <div class="guest-cta">
+    <div class="guest-cta guest-cta-banner">
         <div class="guest-cta-text">
             <strong>กำลังดูแบบผู้เยี่ยมชม</strong>
-            <span>สมัครสมาชิกเพื่อจัดการตู้เสื้อผ้า รับชุดแนะนำจาก AI และแชร์ลุคของคุณเอง</span>
-        </div>
-        <div class="guest-cta-actions">
-            <a href="{% url 'accounts:register' %}" class="btn-primary">สมัครสมาชิก</a>
-            <a href="{% url 'accounts:login' %}" class="btn-outline">เข้าสู่ระบบ</a>
+            <span>ดูโพสต์ได้อย่างเดียว — สมัครหรือเข้าสู่ระบบได้จากเมนูด้านซ้าย</span>
         </div>
     </div>
     {% endif %}

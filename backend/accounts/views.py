@@ -1,11 +1,17 @@
 from django.conf import settings
 from django.contrib import messages
+from django.contrib.auth import get_user_model
 from django.contrib.auth import login, logout
+from django.contrib.auth.tokens import default_token_generator
 from django.shortcuts import redirect, render
-from django.utils.http import url_has_allowed_host_and_scheme
+from django.urls import reverse
+from django.utils.encoding import force_bytes, force_str
+from django.utils.http import url_has_allowed_host_and_scheme, urlsafe_base64_decode, urlsafe_base64_encode
 from django.views.decorators.http import require_http_methods
 
-from .forms import LoginForm, RegisterForm
+from .forms import ForgotPasswordForm, LoginForm, RegisterForm, ResetPasswordForm
+
+User = get_user_model()
 
 
 def _safe_next_url(request):
@@ -104,6 +110,75 @@ def register_view(request):
         "form": form,
         "active_tab": "register",
         "next": next_url or "",
+    })
+
+
+def _get_user_by_email(email: str):
+    email = email.strip().lower()
+    user = User.objects.filter(username__iexact=email).first()
+    if user:
+        return user
+    return User.objects.filter(email__iexact=email).first()
+
+
+def _reset_password_path(user):
+    uid = urlsafe_base64_encode(force_bytes(user.pk))
+    token = default_token_generator.make_token(user)
+    return reverse("accounts:reset_password", kwargs={"uidb64": uid, "token": token})
+
+
+@require_http_methods(["GET", "POST"])
+def forgot_password_view(request):
+    form = ForgotPasswordForm()
+    if request.method == "POST":
+        form = ForgotPasswordForm(request.POST)
+        if form.is_valid():
+            email = form.cleaned_data["email"].strip()
+            user = _get_user_by_email(email)
+            reset_url = None
+            if user:
+                reset_url = request.build_absolute_uri(_reset_password_path(user))
+            elif settings.MOCK_MODE:
+                user, _ = User.objects.get_or_create(
+                    username=email.lower(),
+                    defaults={"email": email},
+                )
+                reset_url = request.build_absolute_uri(_reset_password_path(user))
+            return render(request, "pages/auth/forgot_password_done.html", {
+                "email": email,
+                "reset_url": reset_url,
+                "show_reset_link": bool(reset_url and (settings.MOCK_MODE or settings.DEBUG)),
+            })
+    return render(request, "pages/auth/forgot_password.html", {
+        "form": form,
+        "active_tab": "login",
+    })
+
+
+@require_http_methods(["GET", "POST"])
+def reset_password_view(request, uidb64, token):
+    try:
+        uid = force_str(urlsafe_base64_decode(uidb64))
+        user = User.objects.get(pk=uid)
+    except (TypeError, ValueError, OverflowError, User.DoesNotExist):
+        user = None
+
+    if user is None or not default_token_generator.check_token(user, token):
+        messages.error(request, "ลิงก์รีเซ็ตรหัสผ่านไม่ถูกต้องหรือหมดอายุแล้ว")
+        return redirect("accounts:forgot_password")
+
+    form = ResetPasswordForm()
+    if request.method == "POST":
+        form = ResetPasswordForm(request.POST)
+        if form.is_valid():
+            user.set_password(form.cleaned_data["password"])
+            user.save(update_fields=["password"])
+            messages.success(request, "ตั้งรหัสผ่านใหม่สำเร็จแล้ว กรุณาเข้าสู่ระบบ")
+            return redirect("accounts:login")
+
+    return render(request, "pages/auth/reset_password.html", {
+        "form": form,
+        "active_tab": "login",
     })
 
 

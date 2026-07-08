@@ -493,6 +493,30 @@
 .auth-alert-success { color: #1a7a4a; background: rgba(26, 122, 74, 0.1); }
 .auth-alert-info { color: var(--ed-deep); background: rgba(149, 204, 221, 0.25); }
 
+.auth-demo-reset {
+    margin-top: 1.25rem;
+    padding: 1rem;
+    border-radius: var(--radius-sm);
+    background: rgba(66, 116, 217, 0.08);
+    border: 1px dashed rgba(66, 116, 217, 0.35);
+}
+
+.auth-demo-reset-label {
+    font-size: 0.82rem;
+    color: var(--text-muted);
+    margin-bottom: 0.5rem;
+}
+
+.auth-demo-reset-link {
+    display: block;
+    font-size: 0.82rem;
+    color: var(--ed-main);
+    word-break: break-all;
+    text-decoration: none;
+}
+
+.auth-demo-reset-link:hover { text-decoration: underline; color: var(--ed-deep); }
+
 .mock-banner-auth {
     position: fixed;
     top: 0;

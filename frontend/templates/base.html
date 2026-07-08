@@ -26,7 +26,7 @@
     <link rel="stylesheet" href="/static/css/fonts.css?v=4">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
     <link rel="stylesheet" href="/static/css/style.css?v=5">
-    <link rel="stylesheet" href="/static/css/wardrobe.css?v=46">
+    <link rel="stylesheet" href="/static/css/wardrobe.css?v=49">
     {% block head_extra %}{% endblock %}
 </head>
 <body class="app-body" data-settings-url="{% url 'wardrobe:settings' %}">
@@ -126,8 +126,6 @@
                     <a href="{{ nav_settings }}" class="topbar-btn" data-i18n-title="nav.settings" title="ตั้งค่า"><i class="ti ti-settings"></i></a>
                     <a href="{{ nav_upload }}" class="topbar-btn" data-i18n-title="nav.upload_btn" title="อัปโหลด"><i class="ti ti-camera-plus"></i></a>
                     <a href="{{ nav_profile }}" class="avatar avatar-sm" data-i18n-title="nav.profile_btn" title="โปรไฟล์">{{ user.username|slice:":1"|upper }}</a>
-                    {% else %}
-                    <a href="{% url 'accounts:login' %}" class="topbar-btn topbar-btn-text">เข้าสู่ระบบ</a>
                     {% endif %}
                 </div>
             </header>

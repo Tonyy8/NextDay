@@ -1337,6 +1337,10 @@ select.form-input { cursor: pointer; }
     border: 1px solid rgba(44, 94, 173, 0.15);
 }
 
+.guest-cta-banner {
+    justify-content: flex-start;
+}
+
 .guest-cta-text { display: flex; flex-direction: column; gap: 0.25rem; }
 .guest-cta-text strong { color: var(--blue-deep); font-size: 1rem; }
 .guest-cta-text span { color: var(--text-muted, #5a7a9a); font-size: 0.875rem; }
@@ -1347,6 +1351,40 @@ select.form-input { cursor: pointer; }
     flex-direction: column;
     gap: 0.5rem;
     padding: 0.75rem;
+}
+
+.side-foot-guest .btn-primary {
+    background: #95ccdd;
+    color: #1a3558;
+    border: none;
+    border-radius: 8px;
+    text-transform: none;
+    letter-spacing: normal;
+    font-size: 14px;
+    padding: 10px 16px;
+}
+
+.side-foot-guest .btn-primary:hover {
+    background: #b8dde8;
+    color: #122a47;
+    transform: translateY(-1px);
+}
+
+.side-foot-guest .btn-outline {
+    background: rgba(255, 255, 255, 0.06);
+    color: #eaf3f8;
+    border: 1.5px solid rgba(234, 243, 248, 0.55);
+    border-radius: 8px;
+    text-transform: none;
+    letter-spacing: normal;
+    font-size: 14px;
+    padding: 10px 16px;
+}
+
+.side-foot-guest .btn-outline:hover {
+    background: rgba(255, 255, 255, 0.14);
+    border-color: #fff;
+    color: #fff;
 }
 
 .side-guest-note {
@@ -2198,8 +2236,8 @@ textarea.form-input { resize: vertical; min-height: 80px; font-family: var(--fon
     font-size: 20px;
 }
 .side-logo-text { font-family: var(--font-serif); font-weight: 700; font-size: 1.35rem; letter-spacing: .06em; text-transform: uppercase; }
-.side-upload { background: var(--ed-main); color: #fff; border-radius: 2px; text-transform: uppercase; letter-spacing: .04em; font-size: 12px; }
-.side-upload:hover { background: var(--ed-deep); }
+.side-upload { background: var(--ed-accent); color: var(--ed-deep); border: 1px solid rgba(255, 255, 255, 0.45); border-radius: 8px; text-transform: none; letter-spacing: 0.02em; font-size: 13px; font-weight: 700; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.22); }
+.side-upload:hover { background: var(--ed-cream); color: var(--ed-deep); box-shadow: 0 6px 18px rgba(0, 0, 0, 0.26); transform: translateY(-1px); }
 .side-link { border-radius: 2px; }
 .side-link.active { background: var(--ed-cream); color: var(--ed-deep); }
 .side-group { color: rgba(234, 243, 248, .55); }
