@@ -386,6 +386,7 @@
     font-size: 0.92rem;
     font-weight: 600;
     color: var(--text-dark);
+    text-decoration: none;
     cursor: pointer;
     position: relative;
     overflow: hidden;
