@@ -23,6 +23,11 @@ class Command(BaseCommand):
             )
         )
         for rec in entries:
-            self.stdout.write(
-                f"  pk{rec['pk']:02d} {rec['garment_type']:8} {rec['color_name_th']:6} ← {rec['source_name'][:50]}"
+            line = (
+                f"  pk{rec['pk']:02d} {rec['garment_type']:8} "
+                f"{rec['color_name_th']:6} <- {rec['source_name'][:50]}"
             )
+            try:
+                self.stdout.write(line)
+            except UnicodeEncodeError:
+                self.stdout.write(line.encode("ascii", "replace").decode("ascii"))

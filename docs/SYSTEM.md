@@ -16,13 +16,27 @@
 S(t,b) = 0.6 × Outfit_CBF(t,b) + 0.4 × Score_Color(t,b)
 ```
 
-## รัน
+## รัน (แนะนำ — uv)
 
 ```powershell
-cd "d:\next day-app"
+cd "c:\next day-app"
+uv sync
+uv run manage.py migrate
+uv run manage.py seed_demo
+uv run manage.py runserver
+```
+
+- Mock login: ใช้บัญชี demo ในหน้า login (`MOCK_MODE=True` ใน `.env`)
+- Admin: `admin` / `admin123`
+- `seed_demo` ใส่สถานที่ (Matrix A) + AI settings + รูปตู้เสื้อผ้า mock
+
+## รัน (venv เดิม)
+
+```powershell
+cd "c:\next day-app"
 .\venv\Scripts\pip install -r requirements.txt
 .\venv\Scripts\python manage.py migrate
-.\venv\Scripts\python manage.py seed_rules
+.\venv\Scripts\python manage.py seed_demo
 .\venv\Scripts\python manage.py runserver
 ```
 

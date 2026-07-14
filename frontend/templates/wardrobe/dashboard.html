@@ -38,13 +38,7 @@
             <h1 class="ed-hero-title">NEXT<span class="thin">DAY</span></h1>
             <p class="ed-hero-sub">ยินดีต้อนรับ, {{ username }} — ชุดของวันพรุ่งนี้เริ่มที่นี่</p>
         </div>
-        <a href="{% url 'wardrobe:outfit' %}" class="ed-hero-cta">
-            <span class="ed-hero-cta-icon" aria-hidden="true"><i class="ti ti-sparkles"></i></span>
-            <span class="ed-hero-cta-text">
-                <strong data-i18n="dash.hero_cta">เริ่มจัดชุด</strong>
-                <small data-i18n="dash.hero_cta_hint">AI แนะนำชุดตามอากาศวันนี้</small>
-            </span>
-        </a>
+        <a href="{% url 'wardrobe:outfit' %}" class="ed-hero-cta" data-i18n="dash.hero_cta">เริ่มจัดชุด</a>
     </section>
 
     <!-- ── LATEST TRENDS + Exclusive offer ── -->

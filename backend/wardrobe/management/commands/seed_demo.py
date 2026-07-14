@@ -1,3 +1,5 @@
+from django.contrib.auth import get_user_model
+from django.core.management import call_command
 from django.core.management.base import BaseCommand
 
 from database.models import AISettings, Destination
@@ -57,7 +59,14 @@ DESTINATIONS = [
 
 
 class Command(BaseCommand):
-    help = "Seed destinations (Matrix A) and AI settings"
+    help = "Seed destinations, AI settings, demo users, and mock wardrobe images"
+
+    def add_arguments(self, parser):
+        parser.add_argument(
+            "--skip-images",
+            action="store_true",
+            help="ข้ามการ import รูป mock wardrobe",
+        )
 
     def handle(self, *args, **options):
         for d in DESTINATIONS:
@@ -70,4 +79,30 @@ class Command(BaseCommand):
             }
             Destination.objects.update_or_create(slug=d["slug"], defaults=defaults)
         AISettings.objects.get_or_create(pk=1)
-        self.stdout.write(self.style.SUCCESS(f"Seeded {len(DESTINATIONS)} destinations + AI settings"))
+
+        self._ensure_users()
+        if not options["skip_images"]:
+            call_command("import_mock_wardrobe")
+
+        self.stdout.write(
+            self.style.SUCCESS(
+                "Demo ready.\n"
+                "  Login mock: demo / (กดเข้าสู่ระบบในหน้า login)\n"
+                "  Admin:      admin / admin123\n"
+                "  Start:      uv run manage.py runserver"
+            )
+        )
+
+    def _ensure_users(self):
+        User = get_user_model()
+        if not User.objects.filter(username="admin").exists():
+            User.objects.create_superuser("admin", "admin@nextday.local", "admin123")
+            self.stdout.write(self.style.SUCCESS("Created admin / admin123"))
+        else:
+            self.stdout.write("Admin user already exists")
+
+        if not User.objects.filter(username="demo").exists():
+            User.objects.create_user("demo", "demo@nextday.app", "demo123")
+            self.stdout.write(self.style.SUCCESS("Created demo / demo123"))
+        else:
+            self.stdout.write("Demo user already exists")

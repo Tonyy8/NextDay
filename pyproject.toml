@@ -5,9 +5,21 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "nextday-render"
 version = "0.1.0"
-description = "Render WSGI shim package for NextDay Django app"
+description = "NextDay outfit recommendation app (Django)"
 requires-python = ">=3.12"
+dependencies = [
+    "Django>=5.0,<6.0",
+    "django-environ>=0.11.2",
+    "gunicorn>=21.2.0",
+    "whitenoise>=6.6.0",
+    "opencv-python-headless>=4.9.0",
+    "numpy>=1.26.0",
+    "Pillow>=10.2.0",
+]
 
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["your_application*"]
+
+[tool.uv]
+package = true

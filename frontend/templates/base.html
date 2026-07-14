@@ -81,9 +81,6 @@
                 <a href="{{ nav_profile }}" class="side-link {% if request.resolver_match.url_name == 'profile' %}active{% endif %}">
                     <i class="ti ti-user"></i> <span data-i18n="nav.profile">โปรไฟล์</span>
                 </a>
-                <a href="{{ nav_settings }}" class="side-link {% if request.resolver_match.url_name == 'settings' %}active{% endif %}">
-                    <i class="ti ti-settings"></i> <span data-i18n="nav.settings">ตั้งค่า</span>
-                </a>
                 <a href="{{ nav_feedback }}" class="side-link {% if request.resolver_match.url_name == 'feedback' %}active{% endif %}">
                     <i class="ti ti-message-report"></i> <span data-i18n="nav.feedback">แจ้งปัญหา/เสนอแนะ</span>
                 </a>
@@ -123,7 +120,6 @@
                 <div class="topbar-title">{% block page_title %}{% endblock %}</div>
                 <div class="topbar-actions">
                     {% if user.is_authenticated %}
-                    <a href="{{ nav_settings }}" class="topbar-btn" data-i18n-title="nav.settings" title="ตั้งค่า"><i class="ti ti-settings"></i></a>
                     <a href="{{ nav_upload }}" class="topbar-btn" data-i18n-title="nav.upload_btn" title="อัปโหลด"><i class="ti ti-camera-plus"></i></a>
                     <a href="{{ nav_profile }}" class="avatar avatar-sm" data-i18n-title="nav.profile_btn" title="โปรไฟล์">{{ user.username|slice:":1"|upper }}</a>
                     {% endif %}
